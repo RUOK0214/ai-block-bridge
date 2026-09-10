@@ -24,16 +24,6 @@ fabricApi {
         createSourceSet = true
         modId = 'ai_block_bridge_test'
         enableGameTests = true
-        enableClientGameTests = false
-    }
-}
-tasks.register('inspectApi') {
-    doLast {
-        def cp = sourceSets.client.compileClasspath.asPath
-        ['net.minecraft.client.Minecraft', 'net.minecraft.client.renderer.GameRenderer',
-         'net.minecraft.client.renderer.LevelRenderer', 'net.minecraft.gizmos.GizmoCollector',
-         'net.minecraft.client.renderer.gizmos.GizmosRenderer'].each { cls ->
-            println providers.exec { commandLine 'javap', '-classpath', cp, cls }.standardOutput.asText.get()
-        }
+        enableClientGameTests = true
     }
 }

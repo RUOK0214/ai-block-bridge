@@ -20,6 +20,7 @@ public final class BridgeClient implements ClientModInitializer {
     public static String dimension="", script="# AI Block Bridge Script v1\n# x y z | block[state] | {NBT}\n0 0 0 | minecraft:stone\n";
     public static String status="모서리 1·2를 선택하세요. 기본 키: [ / ] / 설정창: B";
     public static String exportUndo;
+    public static boolean showSelection=true;
     public static final TextHistory history=new TextHistory();
     private static Assembly response;
     private static int requestId, pending=-1;
@@ -34,6 +35,8 @@ public final class BridgeClient implements ClientModInitializer {
         var open=key("open",GLFW.GLFW_KEY_B,category);
         var first=key("first",GLFW.GLFW_KEY_LEFT_BRACKET,category);
         var second=key("second",GLFW.GLFW_KEY_RIGHT_BRACKET,category);
+        var overlay=key("overlay",GLFW.GLFW_KEY_BACKSLASH,category);
+        SelectionOverlay.register();
         ClientTickEvents.END_CLIENT_TICK.register(mc->{
             if(mc.level==null)return;
             String current=mc.level.dimension().identifier().toString();
@@ -44,6 +47,10 @@ public final class BridgeClient implements ClientModInitializer {
             if(mc.gui.screen()==null) {
                 while(first.consumeClick()) select(mc,true);
                 while(second.consumeClick()) select(mc,false);
+                while(overlay.consumeClick()) {
+                    showSelection=!showSelection;
+                    if(mc.player!=null)mc.player.sendSystemMessage(Component.literal("선택 영역 표시: "+(showSelection?"켜짐":"꺼짐")));
+                }
                 while(open.consumeClick()) mc.gui.setScreen(new BridgeScreen());
             }
         });
