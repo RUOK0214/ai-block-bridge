@@ -13,6 +13,8 @@ jobs:
           distribution: temurin
           java-version: '25'
       - uses: gradle/actions/setup-gradle@v4
+      - name: Inspect rendering API
+        run: bash gradlew inspectApi --console=plain
       - name: Test and build
         run: bash gradlew build --console=plain
       - uses: actions/upload-artifact@v4
