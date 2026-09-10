@@ -4,7 +4,13 @@
   "version": "1.0.0",
   "environment": "*",
   "entrypoints": {
-    "fabric-gametest": ["io.github.ruok0214.bridge.BridgeGameTests", "io.github.ruok0214.bridge.CompactDisplayGameTests"],
-    "fabric-client-gametest": ["io.github.ruok0214.bridge.SelectionClientTest"]
+    "fabric-gametest": [
+      "io.github.ruok0214.bridge.BridgeGameTests",
+      "io.github.ruok0214.bridge.CompactDisplayGameTests",
+      "io.github.ruok0214.bridge.AccumulatorGameTests"
+    ],
+    "fabric-client-gametest": [
+      "io.github.ruok0214.bridge.SelectionClientTest"
+    ]
   }
 }
