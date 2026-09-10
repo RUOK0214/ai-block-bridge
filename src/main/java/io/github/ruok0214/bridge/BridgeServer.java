@@ -122,7 +122,12 @@ public final class BridgeServer {
         List<Cell> target=prepare(level,r,body);
         List<Cell> before=target.stream().map(c->snapshot(level,c.pos)).toList();
         checkSnapshotSize(before);
-        try { apply(level,target); }
+        List<Cell> after;
+        try {
+            apply(level,target);
+            after=target.stream().map(c->snapshot(level,c.pos)).toList();
+            checkSnapshotSize(after);
+        }
         catch(Exception ex) {
             try { apply(level,before); }
             catch(Exception rollback) {
@@ -132,7 +137,6 @@ public final class BridgeServer {
             }
             throw new IllegalStateException("붙여넣기 실패. 원래 블록으로 복원했습니다: "+safeMessage(ex));
         }
-        List<Cell> after=target.stream().map(c->snapshot(level,c.pos)).toList();
         undos.put(p.getUUID(),new Undo(packet.dimension(),before,after));
         reply(p,packet,target.size()+"블록 붙여넣기 완료. 직전 작업을 취소할 수 있습니다.");
     }
@@ -145,7 +149,8 @@ public final class BridgeServer {
     }
     static void apply(ServerLevel level,List<Cell> cells) {
         // Suppress drops and shape/neighbor updates during bulk editing. Do not clear a container into the world.
-        int flags=Block.UPDATE_CLIENTS|Block.UPDATE_KNOWN_SHAPE|Block.UPDATE_SUPPRESS_DROPS;
+        int flags=Block.UPDATE_CLIENTS|Block.UPDATE_KNOWN_SHAPE|Block.UPDATE_SUPPRESS_DROPS
+            |Block.UPDATE_SKIP_ON_PLACE|Block.UPDATE_SKIP_BLOCK_ENTITY_SIDEEFFECTS;
         for(Cell c:cells) {
             level.removeBlockEntity(c.pos);
             level.setBlock(c.pos,c.state,flags);
@@ -153,7 +158,7 @@ public final class BridgeServer {
             if(c.state.getBlock() instanceof EntityBlock eb) {
                 BlockEntity be=c.nbt==null?eb.newBlockEntity(c.pos,c.state):BlockEntity.loadStatic(c.pos,c.state,c.nbt.copy(),level.registryAccess());
                 if(be==null) throw new IllegalStateException("블록 엔티티 복원 실패: "+c.pos);
-                level.setBlockEntity(be);be.setChanged();
+                level.setBlockEntity(be);level.blockEntityChanged(c.pos);
             }
             level.sendBlockUpdated(c.pos,c.state,c.state,Block.UPDATE_CLIENTS);
         }
@@ -167,7 +172,11 @@ public final class BridgeServer {
             if(!snapshot(level,expected.pos).equals(expected))
                 throw new IllegalArgumentException("붙여넣기 후 블록 또는 NBT가 변경되어 취소를 중단했습니다. 기존 변경을 덮어쓰지 않았습니다.");
         }
-        apply(level,undo.before);
+        try { apply(level,undo.before); }
+        catch(Exception ex) {
+            undos.put(player.getUUID(),new Undo(undo.dimension,undo.before,null));
+            throw new IllegalStateException("취소 중 오류. 복원 기록은 유지되었습니다. 다시 시도하세요: "+safeMessage(ex));
+        }
         undos.remove(player.getUUID());
         reply(player,packet,"붙여넣기 취소 완료: "+undo.before.size()+"블록 복원");
     }
