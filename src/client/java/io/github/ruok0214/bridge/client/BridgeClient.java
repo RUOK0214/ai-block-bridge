@@ -20,10 +20,14 @@ public final class BridgeClient implements ClientModInitializer {
     public static String dimension="", script="# AI Block Bridge Script v1\n# x y z | block[state] | {NBT}\n0 0 0 | minecraft:stone\n";
     public static String status="모서리 1·2를 선택하세요. 기본 키: [ / ] / 설정창: B";
     public static String exportUndo;
+    public static String timeline="# AI Block Bridge Timeline v1\n# 기록 시작 이후 달라진 블록이 @tick 순서로 표시됩니다.\n";
+    public static String timelineStatus="선택 영역을 정한 뒤 틱 기록을 시작하세요.";
+    public static boolean recording;
     public static boolean showSelection=true;
     public static final TextHistory history=new TextHistory();
+    public static final TextHistory timelineHistory=new TextHistory();
     private static Assembly response;
-    private static int requestId, pending=-1;
+    private static int requestId, pending=-1, pendingAction=-1;
     private static long sentAt;
     private static String exportBefore;
     public static boolean busy() { return pending!=-1; }
@@ -36,13 +40,14 @@ public final class BridgeClient implements ClientModInitializer {
         var first=key("first",GLFW.GLFW_KEY_LEFT_BRACKET,category);
         var second=key("second",GLFW.GLFW_KEY_RIGHT_BRACKET,category);
         var overlay=key("overlay",GLFW.GLFW_KEY_BACKSLASH,category);
+        var record=key("record",GLFW.GLFW_KEY_N,category);
         SelectionOverlay.register();
         ClientTickEvents.END_CLIENT_TICK.register(mc->{
             if(mc.level==null)return;
             String current=mc.level.dimension().identifier().toString();
-            if(!dimension.equals(current)) { a=null;b=null;dimension=current;pending=-1;response=null; }
+            if(!dimension.equals(current)) { a=null;b=null;dimension=current;pending=-1;pendingAction=-1;response=null;recording=false; }
             if(busy() && System.nanoTime()-sentAt>30_000_000_000L) {
-                pending=-1;response=null;status="응답 시간 초과. 월드 상태를 확인한 뒤 다시 시도하세요.";
+                pending=-1;pendingAction=-1;response=null;status=timelineStatus="응답 시간 초과. 월드 상태를 확인한 뒤 다시 시도하세요.";
             }
             if(mc.gui.screen()==null) {
                 while(first.consumeClick()) select(mc,true);
@@ -51,10 +56,11 @@ public final class BridgeClient implements ClientModInitializer {
                     showSelection=!showSelection;
                     if(mc.player!=null)mc.player.sendSystemMessage(Component.literal("선택 영역 표시: "+(showSelection?"켜짐":"꺼짐")));
                 }
+                while(record.consumeClick()) send(recording?BridgePacket.STOP_RECORD:BridgePacket.START_RECORD);
                 while(open.consumeClick()) mc.gui.setScreen(new BridgeScreen());
             }
         });
-        ClientPlayConnectionEvents.DISCONNECT.register((handler,mc)->{a=null;b=null;dimension="";pending=-1;response=null;});
+        ClientPlayConnectionEvents.DISCONNECT.register((handler,mc)->{a=null;b=null;dimension="";pending=-1;pendingAction=-1;response=null;recording=false;});
         ClientPlayNetworking.registerGlobalReceiver(BridgePacket.TYPE,(packet,ctx)->{
             if(packet.request()!=pending)return;
             try {
@@ -65,10 +71,19 @@ public final class BridgeClient implements ClientModInitializer {
                 if(packet.action()==BridgePacket.SCRIPT) {
                     exportUndo=exportBefore;
                     replace(body);status="스크립트화 완료. 공기 블록은 제외했습니다.";
-                } else status=body;
-                pending=-1;response=null;
+                } else if(packet.action()==BridgePacket.TIMELINE) {
+                    replaceTimeline(body);recording=false;
+                    status=timelineStatus="틱 기록 완료. 기록 스크립트 창에서 확인할 수 있습니다.";
+                } else {
+                    status=timelineStatus=body;
+                    if(pendingAction==BridgePacket.START_RECORD&&!body.startsWith("오류:"))recording=true;
+                    if(pendingAction==BridgePacket.STOP_RECORD&&body.startsWith("오류:"))recording=false;
+                }
+                pending=-1;pendingAction=-1;response=null;
                 if(ctx.client().gui.screen() instanceof BridgeScreen screen) screen.syncText();
-            }catch(Exception ex){pending=-1;response=null;status=ex.getMessage();}
+                if(ctx.client().gui.screen() instanceof TimelineScreen screen) screen.syncText();
+                else if(packet.action()==BridgePacket.TIMELINE&&ctx.client().gui.screen()==null)ctx.client().gui.setScreen(new TimelineScreen());
+            }catch(Exception ex){pending=-1;pendingAction=-1;response=null;status=timelineStatus=ex.getMessage();}
         });
     }
     private static void select(Minecraft mc,boolean first) {
@@ -86,16 +101,19 @@ public final class BridgeClient implements ClientModInitializer {
     public static void replace(String value) {
         if(!value.equals(script)){history.remember(script);script=value;}
     }
+    public static void replaceTimeline(String value) {
+        if(!value.equals(timeline)){timelineHistory.remember(timeline);timeline=value;}
+    }
     public static void send(int action) {
         if(busy())return;
         try {
             if(!ClientPlayNetworking.canSend(BridgePacket.TYPE))throw new IllegalArgumentException("서버에 AI Block Bridge 모드가 필요합니다.");
-            Region r=action==BridgePacket.UNDO?Region.of(0,0,0,0,0,0):region();
-            pending=++requestId;sentAt=System.nanoTime();response=null;
+            Region r=(action==BridgePacket.UNDO||action==BridgePacket.STOP_RECORD)?Region.of(0,0,0,0,0,0):region();
+            pending=++requestId;pendingAction=action;sentAt=System.nanoTime();response=null;
             exportBefore=script;
             var packet=new BridgePacket(pending,action,0,1,dimension,r.x(),r.y(),r.z(),r.maxX(),r.maxY(),r.maxZ(),"");
             packet.chunks(action==BridgePacket.PASTE?script:"",action,ClientPlayNetworking::send);
             status="서버에서 처리 중…";
-        }catch(Exception ex){pending=-1;status=ex.getMessage();}
+        }catch(Exception ex){pending=-1;pendingAction=-1;status=timelineStatus=ex.getMessage();}
     }
 }

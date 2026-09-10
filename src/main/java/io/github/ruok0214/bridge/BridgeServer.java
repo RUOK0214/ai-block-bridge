@@ -9,6 +9,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.permissions.Permissions;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
@@ -21,15 +22,26 @@ public final class BridgeServer {
     private record Undo(String dimension,List<Cell> before,List<Cell> after) {}
     private static final Map<UUID,Assembly> incoming=new HashMap<>();
     private static final Map<UUID,Undo> undos=new HashMap<>();
+    private static final Map<UUID,Recording> recordings=new HashMap<>();
     private static final Map<UUID,Long> lastRequest=new HashMap<>();
-    public static void clear(UUID id) { incoming.remove(id);undos.remove(id);lastRequest.remove(id); }
-    public static void clearAll() { incoming.clear();undos.clear();lastRequest.clear(); }
+    private record Recording(String dimension,TickRecorder recorder) {}
+    public static void clear(UUID id) { incoming.remove(id);undos.remove(id);recordings.remove(id);lastRequest.remove(id); }
+    public static void clearAll() { incoming.clear();undos.clear();recordings.clear();lastRequest.clear(); }
+    public static void tick(MinecraftServer server) {
+        for(var entry:recordings.entrySet()) {
+            ServerPlayer player=server.getPlayerList().getPlayer(entry.getKey());
+            Recording recording=entry.getValue();
+            if(player!=null && recording.dimension.equals(player.level().dimension().identifier().toString()) && !recording.recorder.stopped())
+                recording.recorder.capture(player.level());
+        }
+    }
     public static void receive(ServerPlayer player,BridgePacket packet) {
         try {
             // Full NBT can contain command blocks; use owner/operator level 4, not merely creative mode.
             if(!player.permissions().hasPermission(Permissions.COMMANDS_OWNER))
                 throw new IllegalArgumentException("치트 허용 싱글플레이 또는 OP 4 권한이 필요합니다.");
-            if(packet.action()<BridgePacket.EXPORT || packet.action()>BridgePacket.UNDO)
+            if(packet.action()!=BridgePacket.EXPORT && packet.action()!=BridgePacket.PASTE && packet.action()!=BridgePacket.UNDO
+                && packet.action()!=BridgePacket.START_RECORD && packet.action()!=BridgePacket.STOP_RECORD)
                 throw new IllegalArgumentException("알 수 없는 작업입니다.");
             if(!player.level().dimension().identifier().toString().equals(packet.dimension()))
                 throw new IllegalArgumentException("차원이 변경되었습니다. 영역을 다시 선택하세요.");
@@ -47,8 +59,10 @@ public final class BridgeServer {
             incoming.remove(id);
             ServerLevel level=player.level();
             if(packet.action()==BridgePacket.UNDO) { undo(player,packet,level);return; }
+            if(packet.action()==BridgePacket.STOP_RECORD) { stopRecording(player,packet);return; }
             Region region=packet.region();
             validateRegion(level,region);
+            if(packet.action()==BridgePacket.START_RECORD) { startRecording(player,packet,level,region);return; }
             if(packet.action()==BridgePacket.EXPORT) {
                 String result=exportRegion(level,region);
                 packet.chunks(result,BridgePacket.SCRIPT,p->ServerPlayNetworking.send(player,p));
@@ -57,6 +71,17 @@ public final class BridgeServer {
             incoming.remove(player.getUUID());
             reply(player,packet,"오류: "+safeMessage(ex));
         }
+    }
+    private static void startRecording(ServerPlayer player,BridgePacket packet,ServerLevel level,Region region) {
+        if(recordings.containsKey(player.getUUID())) throw new IllegalArgumentException("이미 틱 변화를 기록하고 있습니다.");
+        recordings.put(player.getUUID(),new Recording(packet.dimension(),new TickRecorder(level,region)));
+        reply(player,packet,"틱 기록 시작. 회로를 작동한 뒤 기록 중지 키를 누르세요.");
+    }
+    private static void stopRecording(ServerPlayer player,BridgePacket packet) {
+        Recording recording=recordings.remove(player.getUUID());
+        if(recording==null) throw new IllegalArgumentException("진행 중인 틱 기록이 없습니다.");
+        String result=recording.recorder.result();
+        packet.chunks(result,BridgePacket.TIMELINE,p->ServerPlayNetworking.send(player,p));
     }
     private static String safeMessage(Exception ex) {
         String s=ex.getMessage()==null?ex.getClass().getSimpleName():ex.getMessage();
@@ -70,7 +95,7 @@ public final class BridgeServer {
             throw new IllegalArgumentException("월드 높이 또는 월드 경계를 벗어났습니다.");
         if(!level.hasChunkAt(pos)) throw new IllegalArgumentException("불러오지 않은 청크입니다. 영역 가까이 이동하세요.");
     }
-    private static void validateRegion(ServerLevel level,Region r) {
+    static void validateRegion(ServerLevel level,Region r) {
         for(BlockPos p:BlockPos.betweenClosed(r.x(),r.y(),r.z(),r.maxX(),r.maxY(),r.maxZ())) validatePosition(level,p);
     }
     static Cell snapshot(ServerLevel level,BlockPos pos) {

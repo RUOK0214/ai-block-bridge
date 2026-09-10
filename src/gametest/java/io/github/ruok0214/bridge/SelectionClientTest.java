@@ -1,6 +1,7 @@
 package io.github.ruok0214.bridge;
 
 import io.github.ruok0214.bridge.client.BridgeClient;
+import io.github.ruok0214.bridge.client.TimelineScreen;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.minecraft.core.BlockPos;
@@ -41,6 +42,14 @@ public final class SelectionClientTest implements FabricClientGameTest {
             });
             context.waitTicks(3);
             context.takeScreenshot("selection-first-corner");
+            context.runOnClient(mc->{
+                BridgeClient.timeline="# AI Block Bridge Timeline v1\n\n@tick 1\n0 0 0 | minecraft:lever[powered=true]\n";
+                BridgeClient.timelineStatus="틱 기록 완료";
+                mc.gui.setScreen(new TimelineScreen());
+            });
+            context.waitForScreen(TimelineScreen.class);
+            context.takeScreenshot("timeline-editor");
+            context.setScreen(()->null);
         }
         context.runOnClient(mc->{
             if(BridgeClient.a!=null||BridgeClient.b!=null)throw new AssertionError("Selection must clear on disconnect");

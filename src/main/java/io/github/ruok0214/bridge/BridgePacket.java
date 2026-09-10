@@ -9,6 +9,7 @@ import net.minecraft.resources.Identifier;
 public record BridgePacket(int request, int action, int index, int total, String dimension,
                            int ax,int ay,int az,int bx,int by,int bz,String text) implements CustomPacketPayload {
     public static final int EXPORT=0, PASTE=1, UNDO=2, RESULT=3, SCRIPT=4;
+    public static final int START_RECORD=5, STOP_RECORD=6, TIMELINE=7;
     // UTF-8 can take 3 bytes per UTF-16 code unit. Leave room for metadata within 32 KiB C2S.
     public static final int CHUNK=7000, MAX_CHUNKS=Script.MAX_CHARS/(CHUNK-1)+1;
     public static final Type<BridgePacket> TYPE = new Type<>(Identifier.fromNamespaceAndPath("ai_block_bridge","message"));

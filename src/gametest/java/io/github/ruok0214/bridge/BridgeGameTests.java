@@ -50,4 +50,25 @@ public class BridgeGameTests {
         BridgeServer.apply(level,original);
         h.succeed();
     }
+    @GameTest
+    public void recordsOnlyChangedTicksIncludingAir(GameTestHelper h) throws Exception {
+        var level=h.getLevel();
+        BlockPos p=h.absolutePos(new BlockPos(3,3,3));
+        Region r=Region.of(p.getX(),p.getY(),p.getZ(),p.getX()+1,p.getY(),p.getZ());
+        List<BridgeServer.Cell> original=List.of(BridgeServer.snapshot(level,p),BridgeServer.snapshot(level,p.east()));
+        BridgeServer.apply(level,BridgeServer.prepare(level,r,"0 0 0 | minecraft:air\n1 0 0 | minecraft:air"));
+        TickRecorder recorder=new TickRecorder(level,r);
+        BridgeServer.apply(level,BridgeServer.prepare(level,r,"0 0 0 | minecraft:stone"));
+        recorder.capture(level);
+        recorder.capture(level);
+        BridgeServer.apply(level,BridgeServer.prepare(level,r,"0 0 0 | minecraft:air"));
+        recorder.capture(level);
+        String timeline=recorder.result();
+        h.assertTrue(timeline.contains("@tick 1\n0 0 0 | minecraft:stone"),"Missing first-tick placement: "+timeline);
+        h.assertTrue(!timeline.contains("@tick 2"),"Unchanged tick should be omitted: "+timeline);
+        h.assertTrue(timeline.contains("@tick 3\n0 0 0 | minecraft:air"),"Missing removal as air: "+timeline);
+        h.assertTrue(!timeline.contains("1 0 0 |"),"Unchanged neighboring coordinate was recorded: "+timeline);
+        BridgeServer.apply(level,original);
+        h.succeed();
+    }
 }

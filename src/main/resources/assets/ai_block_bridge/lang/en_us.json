@@ -3,5 +3,6 @@
   "key.ai_block_bridge.open": "Open settings / script editor",
   "key.ai_block_bridge.first": "Select corner 1 (target block)",
   "key.ai_block_bridge.second": "Select corner 2 (target block)",
-  "key.ai_block_bridge.overlay": "Toggle selection overlay"
+  "key.ai_block_bridge.overlay": "Toggle selection overlay",
+  "key.ai_block_bridge.record": "Start / stop tick recording"
 }

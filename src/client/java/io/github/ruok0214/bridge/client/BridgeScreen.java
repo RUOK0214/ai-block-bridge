@@ -48,6 +48,7 @@ public final class BridgeScreen extends Screen {
             catch(Exception ex){BridgeClient.status=ex.getMessage();}
         });
         button("도움말",176,78,64,()->confirm("스크립트 형식", "x y z | minecraft:block[상태] | {NBT}. 공기는 minecraft:air. 생략한 좌표는 유지됩니다. 영역은 최대 4096블록. 취소 기록은 접속 중에만 유지됩니다.",()->{}));
+        button("틱 기록",244,78,70,()->minecraft.gui.setScreen(new TimelineScreen()));
         button("닫기",width-66,78,58,this::onClose);
         editor=MultiLineEditBox.builder().setX(8).setY(116).setShowDecorations(true)
             .build(font,width-16,Math.max(30,height-203),Component.literal("블록 스크립트"));

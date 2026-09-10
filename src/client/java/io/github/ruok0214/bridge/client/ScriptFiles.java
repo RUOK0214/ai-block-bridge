@@ -9,9 +9,12 @@ import java.io.IOException;
 
 public final class ScriptFiles {
     public static Path choose(boolean save) throws IOException {
+        return choose(save,"structure.txt");
+    }
+    public static Path choose(boolean save,String defaultName) throws IOException {
         Path directory=FabricLoader.getInstance().getGameDir().resolve("ai-block-bridge");
         Files.createDirectories(directory);
-        String initial=directory.resolve("structure.txt").toAbsolutePath().toString();
+        String initial=directory.resolve(defaultName).toAbsolutePath().toString();
         String chosen=save?TinyFileDialogs.tinyfd_saveFileDialog("Export script (.txt)",initial,null,"UTF-8 text")
             :TinyFileDialogs.tinyfd_openFileDialog("Import script (.txt)",initial,null,"UTF-8 text",false);
         return chosen==null?null:Path.of(chosen);
