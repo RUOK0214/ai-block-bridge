@@ -30,10 +30,9 @@ fabricApi {
 tasks.register('inspectApi') {
     doLast {
         def cp = sourceSets.client.compileClasspath.asPath
-        ['net.minecraft.gizmos.Gizmos', 'net.minecraft.gizmos.GizmoStyle',
-         'net.minecraft.gizmos.Gizmo', 'net.minecraft.gizmos.GizmoProperties',
-         'net.minecraft.client.renderer.state.level.LevelRenderState',
-         'net.minecraft.client.renderer.debug.DebugRenderer'].each { cls ->
+        ['net.minecraft.client.Minecraft', 'net.minecraft.client.renderer.GameRenderer',
+         'net.minecraft.client.renderer.LevelRenderer', 'net.minecraft.gizmos.GizmoCollector',
+         'net.minecraft.client.renderer.gizmos.GizmosRenderer'].each { cls ->
             println providers.exec { commandLine 'javap', '-classpath', cp, cls }.standardOutput.asText.get()
         }
     }
