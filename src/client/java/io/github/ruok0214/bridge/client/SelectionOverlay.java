@@ -70,7 +70,8 @@ public final class SelectionOverlay {
         Gizmos.line(new Vec3(x,y,z),new Vec3(X,Y,Z),GRID,1).setAlwaysOnTop();
     }
     private static void text(String value,Vec3 at,int color,Vec3 camera) {
-        float scale=(float)Math.clamp(at.distanceTo(camera)*0.0045,0.035,0.5);
+        // Gizmo scale is a multiplier of Minecraft's text transform, not blocks per pixel.
+        float scale=TextGizmo.Style.DEFAULT_SCALE*(float)Math.clamp(at.distanceTo(camera)/4,1.5,24);
         Gizmos.billboardText(value,at,TextGizmo.Style.forColorAndCentered(color).withScale(scale)).setAlwaysOnTop();
     }
     private SelectionOverlay() {}
