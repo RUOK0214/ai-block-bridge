@@ -13,8 +13,6 @@ jobs:
           distribution: temurin
           java-version: '25'
       - uses: gradle/actions/setup-gradle@v4
-      - name: Inspect label API
-        run: bash gradlew inspectApi '-PinspectClass=net.minecraft.gizmos.TextGizmo$Style' --console=plain
       - name: Test and build
         run: bash gradlew build --console=plain
       - name: Client rendering smoke test
@@ -33,8 +31,6 @@ jobs:
             build/test-results/
             build/reports/
             build/gametest-results.xml
-            run/clientGameTest/screenshots/
-            run/clientGameTest/logs/
             build/run/clientGameTest/screenshots/
             build/run/clientGameTest/logs/
           if-no-files-found: ignore

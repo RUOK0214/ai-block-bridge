@@ -4,6 +4,7 @@ import io.github.ruok0214.bridge.client.BridgeClient;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.minecraft.core.BlockPos;
+import org.lwjgl.glfw.GLFW;
 
 /** Actual rendered screenshots: normal, behind a wall, hidden, and partial selection. */
 public final class SelectionClientTest implements FabricClientGameTest {
@@ -29,10 +30,15 @@ public final class SelectionClientTest implements FabricClientGameTest {
             world.getConnection().waitForChunksRender();
             context.waitTicks(10);
             context.takeScreenshot("selection-through-wall");
-            context.runOnClient(mc->BridgeClient.showSelection=false);
+            context.getInput().pressKey(GLFW.GLFW_KEY_BACKSLASH);
             context.waitTicks(3);
+            context.runOnClient(mc->{if(BridgeClient.showSelection)throw new AssertionError("Overlay hotkey did not hide selection");});
             context.takeScreenshot("selection-hidden");
-            context.runOnClient(mc->{BridgeClient.showSelection=true;BridgeClient.b=null;});
+            context.getInput().pressKey(GLFW.GLFW_KEY_BACKSLASH);
+            context.runOnClient(mc->{
+                if(!BridgeClient.showSelection)throw new AssertionError("Overlay hotkey did not restore selection");
+                BridgeClient.b=null;
+            });
             context.waitTicks(3);
             context.takeScreenshot("selection-first-corner");
         }

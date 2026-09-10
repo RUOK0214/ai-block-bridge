@@ -27,15 +27,15 @@ public final class SelectionOverlay {
             Selection selection=context.levelState().getData(KEY);
             if(selection!=null) {
                 try(var ignored=context.levelRenderer().collectPerFrameRenderThreadGizmos()) {
-                    draw(selection);
+                    draw(selection,context.levelState().cameraRenderState.pos);
                 }
             }
         });
     }
 
-    private static void draw(Selection s) {
-        if(s.a()!=null)marker(s.a(),FIRST,"1",0.22);
-        if(s.b()!=null)marker(s.b(),SECOND,"2",0.55);
+    private static void draw(Selection s,Vec3 camera) {
+        if(s.a()!=null)marker(s.a(),FIRST,"1",0.25,camera);
+        if(s.b()!=null)marker(s.b(),SECOND,"2",0.85,camera);
         if(s.a()==null||s.b()==null)return;
         // Cast before max+1: selected block coordinates are inclusive, box faces are exclusive.
         double x=Math.min(s.a().getX(),s.b().getX()), y=Math.min(s.a().getY(),s.b().getY()), z=Math.min(s.a().getZ(),s.b().getZ());
@@ -57,20 +57,21 @@ public final class SelectionOverlay {
         }
         // The origin is the independent minimum of all three axes, not necessarily corner 1.
         Gizmos.cuboid(new AABB(x+0.12,y+0.12,z+0.12,x+0.88,y+0.88,z+0.88),GizmoStyle.stroke(ORIGIN,3)).setAlwaysOnTop();
-        text("0,0,0",new Vec3(x+0.5,y+0.5,z+0.5),ORIGIN);
+        text("0,0,0",new Vec3(x+0.5,y+0.5,z+0.5),ORIGIN,camera);
         String size="%d x %d x %d".formatted((long)sx,(long)sy,(long)sz);
-        text(size+(valid?"":" / >4096"),new Vec3((x+X)/2,Y+0.85,(z+Z)/2),valid?EDGE:0xFFFF5555);
+        text(size+(valid?"":" / >4096"),new Vec3((x+X)/2,Y+1.6,(z+Z)/2),valid?EDGE:0xFFFF5555,camera);
     }
 
-    private static void marker(BlockPos p,int color,String label,double labelOffset) {
+    private static void marker(BlockPos p,int color,String label,double labelOffset,Vec3 camera) {
         Gizmos.cuboid(new AABB(p).inflate(0.012),GizmoStyle.stroke(color,3)).setAlwaysOnTop();
-        text(label+": "+p.toShortString(),new Vec3(p.getX()+0.5,p.getY()+1+labelOffset,p.getZ()+0.5),color);
+        text(label+": "+p.toShortString(),new Vec3(p.getX()+0.5,p.getY()+1+labelOffset,p.getZ()+0.5),color,camera);
     }
     private static void line(double x,double y,double z,double X,double Y,double Z) {
         Gizmos.line(new Vec3(x,y,z),new Vec3(X,Y,Z),GRID,1).setAlwaysOnTop();
     }
-    private static void text(String value,Vec3 at,int color) {
-        Gizmos.billboardText(value,at,TextGizmo.Style.forColorAndCentered(color)).setAlwaysOnTop();
+    private static void text(String value,Vec3 at,int color,Vec3 camera) {
+        float scale=(float)Math.clamp(at.distanceTo(camera)*0.0045,0.035,0.5);
+        Gizmos.billboardText(value,at,TextGizmo.Style.forColorAndCentered(color).withScale(scale)).setAlwaysOnTop();
     }
     private SelectionOverlay() {}
 }
