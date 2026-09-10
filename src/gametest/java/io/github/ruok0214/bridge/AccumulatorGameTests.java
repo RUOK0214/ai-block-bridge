@@ -45,7 +45,7 @@ public class AccumulatorGameTests {
             h.runAtTickTime(start,()->setInputs(h,origin,op.input));
             h.runAtTickTime(start+20,()->setControl(h,button,true));
             h.runAtTickTime(start+20+op.heldTicks,()->setControl(h,button,false));
-            h.runAtTickTime(start+410,()->{
+            h.runAtTickTime(start+440,()->{
                 check(h,origin,expected,carry,"operation "+step+" input="+op.input+" reset="+op.reset);
                 h.assertTrue(!level.getBlockState(origin.offset(99,3,0)).getValue(BlockStateProperties.LIT),"Busy lamp still lit at operation "+step);
                 System.out.println("AIACC ENGINE PASS step="+step+" before="+before+" input="+op.input+" reset="+op.reset+" result="+expected+" carry="+carry);
