@@ -1,0 +1,6 @@
+{
+  "key.category.ai_block_bridge.controls": "AI Block Bridge",
+  "key.ai_block_bridge.open": "Open settings / script editor",
+  "key.ai_block_bridge.first": "Select corner 1 (target block)",
+  "key.ai_block_bridge.second": "Select corner 2 (target block)"
+}
