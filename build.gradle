@@ -22,7 +22,8 @@ test { useJUnitPlatform() }
 tasks.register('inspectApi') {
     doLast {
         def cp = sourceSets.client.compileClasspath.asPath
-        ['net.minecraft.world.level.block.entity.BlockEntity', 'net.minecraft.client.gui.components.MultiLineEditBox',
+        ['net.minecraft.world.level.block.entity.BlockEntity', 'net.minecraft.client.gui.components.MultiLineEditBox$Builder',
+         'net.minecraft.client.gui.components.EditBox', 'net.minecraft.client.Minecraft',
          'net.minecraft.client.input.KeyEvent', 'net.minecraft.client.input.CharacterEvent',
          'net.minecraft.client.KeyboardHandler', 'net.minecraft.commands.arguments.blocks.BlockStateParser'].each { cls ->
             println providers.exec { commandLine 'javap', '-classpath', cp, cls }.standardOutput.asText.get()
