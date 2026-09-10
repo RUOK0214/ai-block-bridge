@@ -3,8 +3,63 @@ import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.core.BlockPos;
 import java.util.List;
+import java.nio.charset.StandardCharsets;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 public class BridgeGameTests {
+    @GameTest(structure="ai_block_bridge_test:large_empty",maxTicks=2800,skyAccess=true)
+    public void sevenSegmentAllInputs(GameTestHelper h) throws Exception {
+        var level=h.getLevel();
+        BlockPos origin=h.absolutePos(new BlockPos(1,1,1));
+        Region region=Region.of(origin.getX(),origin.getY(),origin.getZ(),origin.getX()+83,origin.getY()+14,origin.getZ()+122);
+        String script;
+        try(var stream=BridgeGameTests.class.getResourceAsStream("/seven_segment_4bit.txt.gz")) {
+            if(stream==null)throw new IllegalStateException("Missing seven-segment fixture");
+            script=new String(new java.util.zip.GZIPInputStream(stream).readAllBytes(),StandardCharsets.UTF_8);
+        }
+        BridgeServer.validateRegion(level,region);
+        BridgeServer.apply(level,BridgeServer.prepare(level,region,script));
+        // Exercise the expanded recorder across the whole sparse cuboid, including
+        // an initially empty cell at the highest relative coordinate.
+        TickRecorder recorder=new TickRecorder(level,region);
+        BlockPos far=origin.offset(83,14,122);
+        level.setBlock(far,Blocks.GOLD_BLOCK.defaultBlockState(),Block.UPDATE_ALL);
+        recorder.capture(level);
+        h.assertTrue(recorder.result().contains("83 14 122 | minecraft:gold_block"),"Large recorder missed far air-to-block change");
+        level.setBlock(far,Blocks.AIR.defaultBlockState(),Block.UPDATE_ALL);
+        recorder.capture(level);
+        h.assertTrue(recorder.result().contains("83 14 122 | minecraft:air"),"Large recorder missed far block removal");
+        String[] glyphs={"abcdef","bc","abdeg","abcdg","bcfg","acdfg","acdefg","abc", "abcdefg","abcdfg","abcefg","cdefg","adef","bcdeg","adefg","aefg"};
+        int[][] centers={{41,14,4},{38,11,4},{38,5,4},{41,2,4},{44,5,4},{44,11,4},{41,8,4}};
+        for(int step=0;step<=16;step++) {
+            final int value=step%16;
+            h.runAtTickTime(1+step*160,()->{
+                for(int bit=0;bit<4;bit++) {
+                    BlockPos p=origin.offset(26-8*bit,1,0);
+                    var state=level.getBlockState(p);
+                    h.assertTrue(state.is(Blocks.LEVER),"Missing input lever: "+p);
+                    level.setBlock(p,state.setValue(BlockStateProperties.POWERED,(value&(8>>bit))!=0),Block.UPDATE_ALL);
+                    level.updateNeighborsAt(p.below(),Blocks.LEVER);
+                }
+            });
+            h.runAtTickTime(150+step*160,()->{
+                for(int segment=0;segment<7;segment++) {
+                    char letter=(char)('a'+segment);boolean expected=glyphs[value].indexOf(letter)>=0;
+                    for(int offset=-1;offset<=1;offset++) {
+                        int[] c=centers[segment];boolean horizontal=letter=='a'||letter=='d'||letter=='g';
+                        BlockPos p=origin.offset(c[0]+(horizontal?offset:0),c[1]+(horizontal?0:offset),c[2]);
+                        var state=level.getBlockState(p);
+                        h.assertTrue(state.is(Blocks.REDSTONE_LAMP)&&state.getValue(BlockStateProperties.LIT)==expected,
+                            "Input "+value+" segment "+letter+" at "+p+" expected lit="+expected+" actual="+state);
+                    }
+                }
+                System.out.println("AI7SEG ENGINE PASS input="+value);
+            });
+        }
+        h.runAtTickTime(2720,h::succeed);
+    }
     @GameTest
     public void hopperCooldownFilterPreservesItems(GameTestHelper h) throws Exception {
         var level=h.getLevel();

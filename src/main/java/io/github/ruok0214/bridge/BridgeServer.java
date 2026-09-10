@@ -96,7 +96,14 @@ public final class BridgeServer {
         if(!level.hasChunkAt(pos)) throw new IllegalArgumentException("불러오지 않은 청크입니다. 영역 가까이 이동하세요.");
     }
     static void validateRegion(ServerLevel level,Region r) {
-        for(BlockPos p:BlockPos.betweenClosed(r.x(),r.y(),r.z(),r.maxX(),r.maxY(),r.maxZ())) validatePosition(level,p);
+        // Height and the rectangular world border need only the opposite corners;
+        // chunk availability needs one check per intersecting chunk, not per block.
+        validatePosition(level,new BlockPos(r.x(),r.y(),r.z()));
+        validatePosition(level,new BlockPos(r.maxX(),r.maxY(),r.maxZ()));
+        for(int cx=r.x()>>4;cx<=(r.maxX()>>4);cx++)
+            for(int cz=r.z()>>4;cz<=(r.maxZ()>>4);cz++)
+                if(!level.hasChunkAt(new BlockPos(Math.max(r.x(),cx<<4),r.y(),Math.max(r.z(),cz<<4))))
+                    throw new IllegalArgumentException("불러오지 않은 청크입니다. 영역 가까이 이동하세요.");
     }
     static Cell snapshot(ServerLevel level,BlockPos pos) {
         BlockEntity be=level.getBlockEntity(pos);
@@ -106,6 +113,7 @@ public final class BridgeServer {
         StringBuilder text=new StringBuilder("# AI Block Bridge Script v1\n# size: "+r.sizeX()+" "+r.sizeY()+" "+r.sizeZ()+
             "\n# origin: "+r.x()+" "+r.y()+" "+r.z()+"\n# Air is omitted. Unlisted coordinates are unchanged on paste.\n");
         for(BlockPos p:BlockPos.betweenClosed(r.x(),r.y(),r.z(),r.maxX(),r.maxY(),r.maxZ())) {
+            if(level.getBlockState(p).isAir()) continue;
             Cell cell=snapshot(level,p);
             if(cell.state.isAir()) continue;
             text.append(p.getX()-r.x()).append(' ').append(p.getY()-r.y()).append(' ').append(p.getZ()-r.z())

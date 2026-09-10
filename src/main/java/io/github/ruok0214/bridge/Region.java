@@ -2,7 +2,8 @@ package io.github.ruok0214.bridge;
 
 /** Inclusive, normalized integer cuboid. Independent of Minecraft for testing. */
 public record Region(int x, int y, int z, int maxX, int maxY, int maxZ) {
-    public static final int MAX_BLOCKS = 4096;
+    public static final int MAX_BLOCKS = 1_048_576;
+    public static final String MAX_BLOCKS_TEXT = String.format(java.util.Locale.ROOT,"%,d",MAX_BLOCKS);
     public static Region of(int ax, int ay, int az, int bx, int by, int bz) {
         return new Region(Math.min(ax,bx), Math.min(ay,by), Math.min(az,bz), Math.max(ax,bx), Math.max(ay,by), Math.max(az,bz));
     }
@@ -10,7 +11,7 @@ public record Region(int x, int y, int z, int maxX, int maxY, int maxZ) {
         if (x > maxX || y > maxY || z > maxZ) throw new IllegalArgumentException("잘못된 영역입니다.");
         long sx = (long)maxX-x+1, sy = (long)maxY-y+1, sz = (long)maxZ-z+1;
         if (sx > MAX_BLOCKS || sy > MAX_BLOCKS || sz > MAX_BLOCKS || sx*sy*sz > MAX_BLOCKS)
-            throw new IllegalArgumentException("영역은 최대 4,096블록입니다.");
+            throw new IllegalArgumentException("영역은 최대 "+MAX_BLOCKS_TEXT+"블록입니다.");
     }
     public int sizeX() { return maxX-x+1; }
     public int sizeY() { return maxY-y+1; }

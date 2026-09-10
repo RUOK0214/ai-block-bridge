@@ -59,7 +59,7 @@ public final class SelectionOverlay {
         Gizmos.cuboid(new AABB(x+0.12,y+0.12,z+0.12,x+0.88,y+0.88,z+0.88),GizmoStyle.stroke(ORIGIN,3)).setAlwaysOnTop();
         text("0,0,0",new Vec3(x+0.5,y+0.5,z+0.5),ORIGIN,camera);
         String size="%d x %d x %d".formatted((long)sx,(long)sy,(long)sz);
-        text(size+(valid?"":" / >4096"),new Vec3((x+X)/2,Y+1.6,(z+Z)/2),valid?EDGE:0xFFFF5555,camera);
+        text(size+(valid?"":" / >"+Region.MAX_BLOCKS_TEXT),new Vec3((x+X)/2,Y+1.6,(z+Z)/2),valid?EDGE:0xFFFF5555,camera);
     }
 
     private static void marker(BlockPos p,int color,String label,double labelOffset,Vec3 camera) {

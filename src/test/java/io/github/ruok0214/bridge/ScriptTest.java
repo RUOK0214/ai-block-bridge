@@ -7,7 +7,11 @@ class ScriptTest {
     @Test void originUsesIndependentMinimums(){assertEquals(new Region(7,-3,8,9,-1,9),r);assertEquals(18,r.volume());}
     @Test void singleBlockIsInclusive(){assertEquals(1,Region.of(1,2,3,1,2,3).volume());}
     @Test void rejectsHugeAndOverflow(){assertThrows(IllegalArgumentException.class,()->Region.of(Integer.MIN_VALUE,0,0,Integer.MAX_VALUE,0,0));}
-    @Test void allowsBoundarySize(){assertEquals(4096,Region.of(0,0,0,15,15,15).volume());}
+    @Test void allowsBoundarySize(){assertEquals(Region.MAX_BLOCKS,Region.of(0,0,0,127,127,63).volume());}
+    @Test void acceptsSevenSegmentBounds(){assertEquals(154_980,Region.of(0,0,0,83,14,122).volume());}
+    @Test void rejectsOneAboveLimit(){assertThrows(IllegalArgumentException.class,()->Region.of(0,0,0,Region.MAX_BLOCKS,0,0));}
+    @Test void allowsLongThinBoundary(){assertEquals(Region.MAX_BLOCKS,Region.of(0,0,0,Region.MAX_BLOCKS-1,0,0).volume());}
+    @Test void rejectsProductAboveLimit(){assertThrows(IllegalArgumentException.class,()->Region.of(0,0,0,1024,1023,0));}
     @Test void parsesCommentsCommasAndNbtPipe(){
         var e=Script.parse("\uFEFF# comment\r\n0, 2, 1 | minecraft:barrel[facing=up] | {CustomName:'a|b'}\r\n",r).getFirst();
         assertEquals(2,e.y());assertEquals("{CustomName:'a|b'}",e.nbt());assertEquals(2,e.line());
