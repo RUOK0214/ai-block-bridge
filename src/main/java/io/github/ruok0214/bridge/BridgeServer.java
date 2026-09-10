@@ -17,7 +17,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.slf4j.LoggerFactory;
 
 public final class BridgeServer {
-    private record Cell(BlockPos pos,BlockState state,CompoundTag nbt) {}
+    record Cell(BlockPos pos,BlockState state,CompoundTag nbt) {}
     private record Undo(String dimension,List<Cell> before,List<Cell> after) {}
     private static final Map<UUID,Assembly> incoming=new HashMap<>();
     private static final Map<UUID,Undo> undos=new HashMap<>();
@@ -73,11 +73,11 @@ public final class BridgeServer {
     private static void validateRegion(ServerLevel level,Region r) {
         for(BlockPos p:BlockPos.betweenClosed(r.x(),r.y(),r.z(),r.maxX(),r.maxY(),r.maxZ())) validatePosition(level,p);
     }
-    private static Cell snapshot(ServerLevel level,BlockPos pos) {
+    static Cell snapshot(ServerLevel level,BlockPos pos) {
         BlockEntity be=level.getBlockEntity(pos);
         return new Cell(pos.immutable(),level.getBlockState(pos),be==null?null:be.saveWithFullMetadata(level.registryAccess()));
     }
-    private static String exportRegion(ServerLevel level,Region r) {
+    static String exportRegion(ServerLevel level,Region r) {
         StringBuilder text=new StringBuilder("# AI Block Bridge Script v1\n# size: "+r.sizeX()+" "+r.sizeY()+" "+r.sizeZ()+
             "\n# origin: "+r.x()+" "+r.y()+" "+r.z()+"\n# Includes air. Unlisted coordinates are unchanged on paste.\n");
         for(BlockPos p:BlockPos.betweenClosed(r.x(),r.y(),r.z(),r.maxX(),r.maxY(),r.maxZ())) {
@@ -93,11 +93,14 @@ public final class BridgeServer {
         }
         return text.toString();
     }
-    private static List<Cell> prepare(ServerLevel level,Region r,String body) throws Exception {
+    static List<Cell> prepare(ServerLevel level,Region r,String body) throws Exception {
         var cells=new ArrayList<Cell>();
         for(Script.Entry e:Script.parse(body,r)) {
             try {
-                BlockState state=BlockStateParser.parseForBlock(level.registryAccess().lookupOrThrow(Registries.BLOCK),e.state(),false).blockState();
+                var reader=new com.mojang.brigadier.StringReader(e.state());
+                BlockState state=BlockStateParser.parseForBlock(level.registryAccess().lookupOrThrow(Registries.BLOCK),reader,false).blockState();
+                reader.skipWhitespace();
+                if(reader.canRead())throw new IllegalArgumentException("블록 상태 뒤에 잘못된 문자가 있습니다.");
                 BlockPos pos=new BlockPos(r.x()+e.x(),r.y()+e.y(),r.z()+e.z());
                 CompoundTag tag=null;
                 if(!e.nbt().isEmpty()) {
@@ -140,7 +143,7 @@ public final class BridgeServer {
             if(count>Script.MAX_CHARS) throw new IllegalArgumentException("실행 취소용 NBT가 너무 큽니다. 영역을 줄이세요.");
         }
     }
-    private static void apply(ServerLevel level,List<Cell> cells) {
+    static void apply(ServerLevel level,List<Cell> cells) {
         // Suppress drops and shape/neighbor updates during bulk editing. Do not clear a container into the world.
         int flags=Block.UPDATE_CLIENTS|Block.UPDATE_KNOWN_SHAPE|Block.UPDATE_SUPPRESS_DROPS;
         for(Cell c:cells) {

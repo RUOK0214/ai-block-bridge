@@ -19,11 +19,19 @@ processResources {
 tasks.withType(JavaCompile).configureEach { options.release = 25; options.encoding = 'UTF-8' }
 java { withSourcesJar(); sourceCompatibility = JavaVersion.VERSION_25; targetCompatibility = JavaVersion.VERSION_25 }
 test { useJUnitPlatform() }
+fabricApi {
+    configureTests {
+        createSourceSet = true
+        modId = 'ai_block_bridge_test'
+        enableGameTests = true
+        enableClientGameTests = false
+    }
+}
 tasks.register('inspectApi') {
     doLast {
         def cp = sourceSets.client.compileClasspath.asPath
         ['net.minecraft.world.level.block.entity.BlockEntity', 'net.minecraft.client.gui.components.MultiLineEditBox$Builder',
-         'net.minecraft.client.gui.components.EditBox', 'net.minecraft.client.Minecraft',
+         'net.minecraft.world.level.block.Block', 'net.minecraft.world.level.storage.TagValueInput',
          'net.minecraft.client.input.KeyEvent', 'net.minecraft.client.input.CharacterEvent',
          'net.minecraft.client.KeyboardHandler', 'net.minecraft.commands.arguments.blocks.BlockStateParser'].each { cls ->
             println providers.exec { commandLine 'javap', '-classpath', cp, cls }.standardOutput.asText.get()

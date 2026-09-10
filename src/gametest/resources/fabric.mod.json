@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "id": "ai_block_bridge_test",
+  "version": "1.0.0",
+  "environment": "*",
+  "entrypoints": {"fabric-gametest": ["io.github.ruok0214.bridge.BridgeGameTests"]}
+}

@@ -9,7 +9,7 @@ import net.minecraft.resources.Identifier;
 public record BridgePacket(int request, int action, int index, int total, String dimension,
                            int ax,int ay,int az,int bx,int by,int bz,String text) implements CustomPacketPayload {
     public static final int EXPORT=0, PASTE=1, UNDO=2, RESULT=3, SCRIPT=4;
-    public static final int CHUNK=16000, MAX_CHUNKS=(Script.MAX_CHARS+CHUNK-1)/CHUNK;
+    public static final int CHUNK=16000, MAX_CHUNKS=Script.MAX_CHARS/(CHUNK-1)+1;
     public static final Type<BridgePacket> TYPE = new Type<>(Identifier.fromNamespaceAndPath("ai_block_bridge","message"));
     public static final StreamCodec<RegistryFriendlyByteBuf,BridgePacket> CODEC = new StreamCodec<>() {
         public BridgePacket decode(RegistryFriendlyByteBuf b) {
@@ -25,8 +25,13 @@ public record BridgePacket(int request, int action, int index, int total, String
     public Region region() { return Region.of(ax,ay,az,bx,by,bz); }
     public void chunks(String body, int operation, java.util.function.Consumer<BridgePacket> send) {
         if(body.length()>Script.MAX_CHARS) throw new IllegalArgumentException("스크립트 크기 제한을 초과했습니다.");
-        int count=Math.max(1,(body.length()+CHUNK-1)/CHUNK);
-        for(int i=0;i<count;i++) send.accept(new BridgePacket(request,operation,i,count,dimension,ax,ay,az,bx,by,bz,
-            body.substring(i*CHUNK,Math.min(body.length(),(i+1)*CHUNK))));
+        var parts=new java.util.ArrayList<String>();
+        for(int start=0;start<body.length();) {
+            int end=Math.min(body.length(),start+CHUNK);
+            if(end<body.length()&&Character.isHighSurrogate(body.charAt(end-1)))end--;
+            parts.add(body.substring(start,end));start=end;
+        }
+        if(parts.isEmpty())parts.add("");
+        for(int i=0;i<parts.size();i++) send.accept(new BridgePacket(request,operation,i,parts.size(),dimension,ax,ay,az,bx,by,bz,parts.get(i)));
     }
 }

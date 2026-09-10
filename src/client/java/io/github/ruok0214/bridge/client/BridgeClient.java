@@ -70,7 +70,7 @@ public final class BridgeClient implements ClientModInitializer {
             if(first)a=hit.getBlockPos().immutable();else b=hit.getBlockPos().immutable();
             status="모서리 "+(first?1:2)+": "+hit.getBlockPos().toShortString();
         }else status="블록을 바라본 상태에서 선택 키를 누르세요.";
-        if(mc.player!=null)mc.player.displayClientMessage(Component.literal(status),true);
+        if(mc.player!=null)mc.player.sendSystemMessage(Component.literal(status));
     }
     public static Region region() {
         if(a==null||b==null)throw new IllegalArgumentException("모서리 1과 2를 모두 선택하세요.");
