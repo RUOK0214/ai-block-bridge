@@ -12,7 +12,7 @@ import org.lwjgl.glfw.GLFW;
 /** Editor for recorded tick order. It is intentionally separate from the placement script. */
 public final class TimelineScreen extends Screen {
     private MultiLineEditBox editor;
-    private Button start,stop,load,save,copy,undo;
+    private Button start,stop,load,save,copy,undo,filter;
     private boolean syncing;
     public TimelineScreen(){super(Component.literal("AI Block Bridge · 틱 기록"));}
     private Button button(String title,int x,int y,int w,Runnable action) {
@@ -26,9 +26,13 @@ public final class TimelineScreen extends Screen {
         stop=button("기록 중지",12+w,28,w,()->BridgeClient.send(BridgePacket.STOP_RECORD));
         button("배치 스크립트",16+w*2,28,w,()->minecraft.gui.setScreen(new BridgeScreen()));
         button("닫기",20+w*3,28,w,this::onClose);
-        editor=MultiLineEditBox.builder().setX(8).setY(76).setShowDecorations(true)
-            .build(font,width-16,Math.max(40,height-151),Component.literal("틱 기록 스크립트"));
-        editor.setCharacterLimit(Script.MAX_CHARS);editor.setValue(BridgeClient.timeline);
+        filter=button(filterLabel(),8,72,width-16,()->{
+            BridgeClient.ignoreHopperCooldown=!BridgeClient.ignoreHopperCooldown;
+            filter.setMessage(Component.literal(filterLabel()));
+        });
+        editor=MultiLineEditBox.builder().setX(8).setY(98).setShowDecorations(true)
+            .build(font,width-16,Math.max(40,height-173),Component.literal("틱 기록 스크립트"));
+        editor.setCharacterLimit(Script.MAX_TIMELINE_CHARS);editor.setValue(BridgeClient.timeline);
         editor.setValueListener(value->{if(!syncing)BridgeClient.replaceTimeline(value);});addRenderableWidget(editor);
         int bottom=height-67;
         load=button("파일 불러오기",8,bottom,w,this::importFile);
@@ -44,7 +48,7 @@ public final class TimelineScreen extends Screen {
     public void syncText(){if(editor!=null&&!editor.getValue().equals(BridgeClient.timeline)){syncing=true;editor.setValue(BridgeClient.timeline);syncing=false;}}
     private void undoText(){BridgeClient.timeline=BridgeClient.timelineHistory.undo(BridgeClient.timeline);syncText();}
     private void importFile(){try{
-        Path file=ScriptFiles.choose(false,"timeline.txt");if(file==null)return;String value=ScriptFiles.read(file);
+        Path file=ScriptFiles.choose(false,"timeline.txt");if(file==null)return;String value=ScriptFiles.read(file,Script.MAX_TIMELINE_CHARS);
         confirm("기록 스크립트 불러오기",file.getFileName()+" 파일로 현재 기록을 바꿀까요?",()->{BridgeClient.replaceTimeline(value);syncText();BridgeClient.timelineStatus="불러옴: "+file.getFileName();});
     }catch(Exception ex){BridgeClient.timelineStatus="불러오기 실패: "+ex.getMessage();}}
     private void exportFile(){try{
@@ -52,9 +56,11 @@ public final class TimelineScreen extends Screen {
         if(Files.exists(file))confirm("파일 덮어쓰기",file.getFileName()+" 파일을 덮어쓸까요?",write);else write.run();
     }catch(Exception ex){BridgeClient.timelineStatus="저장 실패: "+ex.getMessage();}}
     @Override public void tick(){
+        filter.active=!BridgeClient.busy()&&!BridgeClient.recording;
         boolean idle=!BridgeClient.busy();start.active=idle&&!BridgeClient.recording;stop.active=idle&&BridgeClient.recording;
         boolean editable=idle&&!BridgeClient.recording;editor.active=editable;load.active=editable;save.active=idle;copy.active=idle;undo.active=editable;
     }
+    private String filterLabel(){return "호퍼 쿨다운 제외: "+(BridgeClient.ignoreHopperCooldown?"켜짐":"꺼짐")+" · 최대 6,000틱 / 10만 항목";}
     @Override public boolean keyPressed(KeyEvent event){
         if(editor.isFocused()&&(event.modifiers()&(GLFW.GLFW_MOD_CONTROL|GLFW.GLFW_MOD_SUPER))!=0&&event.key()==GLFW.GLFW_KEY_Z){undoText();return true;}
         return super.keyPressed(event);

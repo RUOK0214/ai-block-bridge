@@ -74,7 +74,7 @@ public final class BridgeServer {
     }
     private static void startRecording(ServerPlayer player,BridgePacket packet,ServerLevel level,Region region) {
         if(recordings.containsKey(player.getUUID())) throw new IllegalArgumentException("이미 틱 변화를 기록하고 있습니다.");
-        recordings.put(player.getUUID(),new Recording(packet.dimension(),new TickRecorder(level,region)));
+        recordings.put(player.getUUID(),new Recording(packet.dimension(),new TickRecorder(level,region,!packet.text().equals("include-cooldown"))));
         reply(player,packet,"틱 기록 시작. 회로를 작동한 뒤 기록 중지 키를 누르세요.");
     }
     private static void stopRecording(ServerPlayer player,BridgePacket packet) {

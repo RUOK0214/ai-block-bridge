@@ -23,6 +23,7 @@ public final class BridgeClient implements ClientModInitializer {
     public static String timeline="# AI Block Bridge Timeline v1\n# 기록 시작 이후 달라진 블록이 @tick 순서로 표시됩니다.\n";
     public static String timelineStatus="선택 영역을 정한 뒤 틱 기록을 시작하세요.";
     public static boolean recording;
+    public static boolean ignoreHopperCooldown=true;
     public static boolean showSelection=true;
     public static final TextHistory history=new TextHistory();
     public static final TextHistory timelineHistory=new TextHistory();
@@ -112,7 +113,7 @@ public final class BridgeClient implements ClientModInitializer {
             pending=++requestId;pendingAction=action;sentAt=System.nanoTime();response=null;
             exportBefore=script;
             var packet=new BridgePacket(pending,action,0,1,dimension,r.x(),r.y(),r.z(),r.maxX(),r.maxY(),r.maxZ(),"");
-            packet.chunks(action==BridgePacket.PASTE?script:"",action,ClientPlayNetworking::send);
+            packet.chunks(action==BridgePacket.PASTE?script:action==BridgePacket.START_RECORD&&!ignoreHopperCooldown?"include-cooldown":"",action,ClientPlayNetworking::send);
             status="서버에서 처리 중…";
         }catch(Exception ex){pending=-1;pendingAction=-1;status=timelineStatus=ex.getMessage();}
     }

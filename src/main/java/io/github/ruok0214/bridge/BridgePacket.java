@@ -11,7 +11,8 @@ public record BridgePacket(int request, int action, int index, int total, String
     public static final int EXPORT=0, PASTE=1, UNDO=2, RESULT=3, SCRIPT=4;
     public static final int START_RECORD=5, STOP_RECORD=6, TIMELINE=7;
     // UTF-8 can take 3 bytes per UTF-16 code unit. Leave room for metadata within 32 KiB C2S.
-    public static final int CHUNK=7000, MAX_CHUNKS=Script.MAX_CHARS/(CHUNK-1)+1;
+    public static final int CHUNK=7000, MAX_CHUNKS=Script.MAX_TIMELINE_CHARS/(CHUNK-1)+1;
+    public static int textLimit(int action) { return action==TIMELINE?Script.MAX_TIMELINE_CHARS:Script.MAX_CHARS; }
     public static final Type<BridgePacket> TYPE = new Type<>(Identifier.fromNamespaceAndPath("ai_block_bridge","message"));
     public static final StreamCodec<RegistryFriendlyByteBuf,BridgePacket> CODEC = new StreamCodec<>() {
         public BridgePacket decode(RegistryFriendlyByteBuf b) {
@@ -26,7 +27,7 @@ public record BridgePacket(int request, int action, int index, int total, String
     public Type<? extends CustomPacketPayload> type() { return TYPE; }
     public Region region() { return Region.of(ax,ay,az,bx,by,bz); }
     public void chunks(String body, int operation, java.util.function.Consumer<BridgePacket> send) {
-        if(body.length()>Script.MAX_CHARS) throw new IllegalArgumentException("스크립트 크기 제한을 초과했습니다.");
+        if(body.length()>textLimit(operation)) throw new IllegalArgumentException("스크립트 크기 제한을 초과했습니다.");
         var parts=new java.util.ArrayList<String>();
         for(int start=0;start<body.length();) {
             int end=Math.min(body.length(),start+CHUNK);

@@ -20,12 +20,15 @@ public final class ScriptFiles {
         return chosen==null?null:Path.of(chosen);
     }
     public static String read(Path file) throws IOException {
+        return read(file,Script.MAX_CHARS);
+    }
+    public static String read(Path file,int limit) throws IOException {
         // Bound the actual read, not just the stat (the file can grow between the two).
         try(var stream=Files.newInputStream(file)) {
-            byte[] bytes=stream.readNBytes(Script.MAX_CHARS*4+1);
-            if(bytes.length>Script.MAX_CHARS*4)throw new IOException("파일이 너무 큽니다.");
+            byte[] bytes=stream.readNBytes(limit*4+1);
+            if(bytes.length>limit*4)throw new IOException("파일이 너무 큽니다.");
             String text=StandardCharsets.UTF_8.newDecoder().decode(java.nio.ByteBuffer.wrap(bytes)).toString();
-            if(text.length()>Script.MAX_CHARS)throw new IOException("최대 2,000,000자입니다.");
+            if(text.length()>limit)throw new IOException("최대 "+limit+"자입니다.");
             return text;
         }
     }

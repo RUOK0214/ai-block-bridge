@@ -6,6 +6,24 @@ import java.util.List;
 
 public class BridgeGameTests {
     @GameTest
+    public void hopperCooldownFilterPreservesItems(GameTestHelper h) throws Exception {
+        var level=h.getLevel();
+        BlockPos p=h.absolutePos(new BlockPos(2,3,2));
+        Region r=Region.of(p.getX(),p.getY(),p.getZ(),p.getX(),p.getY(),p.getZ());
+        var original=BridgeServer.snapshot(level,p);
+        BridgeServer.apply(level,BridgeServer.prepare(level,r,"0 0 0 | minecraft:hopper | {TransferCooldown:8,Items:[]}"));
+        var filtered=new TickRecorder(level,r,true);
+        var full=new TickRecorder(level,r,false);
+        BridgeServer.apply(level,BridgeServer.prepare(level,r,"0 0 0 | minecraft:hopper | {TransferCooldown:7,Items:[]}"));
+        filtered.capture(level);full.capture(level);
+        h.assertTrue(!filtered.result().contains("@tick"+" 1"),"Cooldown-only change was recorded");
+        h.assertTrue(full.result().contains("@tick 1"),"Full mode lost cooldown change");
+        BridgeServer.apply(level,BridgeServer.prepare(level,r,"0 0 0 | minecraft:hopper | {TransferCooldown:6,Items:[{Slot:0b,id:\"minecraft:diamond\",count:1}]}"));
+        filtered.capture(level);
+        h.assertTrue(filtered.result().contains("minecraft:diamond"),"Filter lost item change");
+        BridgeServer.apply(level,List.of(original));h.succeed();
+    }
+    @GameTest
     public void barrelNbtRoundtrip(GameTestHelper h) throws Exception {
         var level=h.getLevel();
         BlockPos p=h.absolutePos(new BlockPos(1,2,1));

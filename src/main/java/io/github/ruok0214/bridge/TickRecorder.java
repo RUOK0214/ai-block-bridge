@@ -8,7 +8,8 @@ import net.minecraft.server.level.ServerLevel;
 
 /** Captures end-of-server-tick state changes without modifying the world. */
 final class TickRecorder {
-    static final int MAX_TICKS=1200;
+    static final int MAX_TICKS=6000, MAX_CHANGES=100_000;
+    private final boolean ignoreHopperCooldown;
     private final Region region;
     private List<BridgeServer.Cell> previous;
     private final StringBuilder text;
@@ -16,11 +17,15 @@ final class TickRecorder {
     private boolean stopped;
 
     TickRecorder(ServerLevel level,Region region) {
+        this(level,region,true);
+    }
+    TickRecorder(ServerLevel level,Region region,boolean ignoreHopperCooldown) {
+        this.ignoreHopperCooldown=ignoreHopperCooldown;
         this.region=region;
         this.previous=snapshot(level);
         this.text=new StringBuilder("# AI Block Bridge Timeline v1\n# size: "+region.sizeX()+" "+region.sizeY()+" "+region.sizeZ()+
             "\n# origin: "+region.x()+" "+region.y()+" "+region.z()+
-            "\n# Only changes after recording started. @tick is a server-tick offset.\n");
+            "\n# Only changes after recording started. @tick is a server-tick offset.\n# ignore hopper TransferCooldown: "+ignoreHopperCooldown+"\n");
     }
     void capture(ServerLevel level) {
         if(stopped)return;
@@ -35,16 +40,24 @@ final class TickRecorder {
         }
         if(count>0) {
             String section="\n@tick "+tick+'\n'+changed;
-            if((long)text.length()+section.length()>Script.MAX_CHARS) { finish("스크립트가 2,000,000자를 넘어 기록을 종료했습니다.");return; }
+            if(changes+count>MAX_CHANGES) { finish("변경 항목 100,000개 제한: 마지막 틱은 부분 기록하지 않았습니다.");return; }
+            if((long)text.length()+section.length()>Script.MAX_TIMELINE_CHARS-256) { finish("기록 용량 20,000,000자 제한에 도달했습니다.");return; }
             text.append(section);changes+=count;
         }
         previous=current;
-        if(tick>=MAX_TICKS)finish("최대 기록 시간 1,200틱에 도달했습니다.");
+        if(changes>=MAX_CHANGES)finish("변경 항목 100,000개에 도달했습니다.");
+        else if(tick>=MAX_TICKS)finish("최대 기록 시간 6,000틱에 도달했습니다.");
     }
     private List<BridgeServer.Cell> snapshot(ServerLevel level) {
         var cells=new ArrayList<BridgeServer.Cell>(region.volume());
-        for(BlockPos p:BlockPos.betweenClosed(region.x(),region.y(),region.z(),region.maxX(),region.maxY(),region.maxZ()))
-            cells.add(BridgeServer.snapshot(level,p));
+        for(BlockPos p:BlockPos.betweenClosed(region.x(),region.y(),region.z(),region.maxX(),region.maxY(),region.maxZ())) {
+            var cell=BridgeServer.snapshot(level,p);
+            if(ignoreHopperCooldown && cell.state().is(net.minecraft.world.level.block.Blocks.HOPPER) && cell.nbt()!=null) {
+                var tag=cell.nbt().copy();tag.remove("TransferCooldown");
+                cell=new BridgeServer.Cell(cell.pos(),cell.state(),tag);
+            }
+            cells.add(cell);
+        }
         return List.copyOf(cells);
     }
     private void append(StringBuilder out,BridgeServer.Cell cell) {
@@ -62,7 +75,6 @@ final class TickRecorder {
     }
     boolean stopped() { return stopped; }
     String result() {
-        text.append("\n# recorded ticks: ").append(tick).append(" / changed entries: ").append(changes).append('\n');
-        return text.toString();
+        return text.toString()+"\n# recorded ticks: "+tick+" / changed entries: "+changes+'\n';
     }
 }

@@ -5,6 +5,7 @@ import java.util.*;
 /** Data, never executable code. The third field is opaque SNBT and may contain '|'. */
 public final class Script {
     public static final int MAX_CHARS = 2_000_000;
+    public static final int MAX_TIMELINE_CHARS = 20_000_000;
     public record Entry(int x, int y, int z, String state, String nbt, int line) {}
     public static List<Entry> parse(String text, Region region) {
         if (text.length()>MAX_CHARS) throw new IllegalArgumentException("스크립트는 최대 2,000,000자입니다.");
