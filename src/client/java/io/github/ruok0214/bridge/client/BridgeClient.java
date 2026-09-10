@@ -64,7 +64,7 @@ public final class BridgeClient implements ClientModInitializer {
                 if(body==null)return;
                 if(packet.action()==BridgePacket.SCRIPT) {
                     exportUndo=exportBefore;
-                    replace(body);status="스크립트화 완료. 공기를 포함한 전체 영역입니다.";
+                    replace(body);status="스크립트화 완료. 공기 블록은 제외했습니다.";
                 } else status=body;
                 pending=-1;response=null;
                 if(ctx.client().gui.screen() instanceof BridgeScreen screen) screen.syncText();

@@ -63,7 +63,7 @@ public final class BridgeScreen extends Screen {
         });
         button("편집 취소",20+w*3,bottom,w,this::undoText);
         button("영역 → 스크립트",8,bottom+24,w,()->{
-            if(applyCoordinates())confirm("스크립트화", "현재 스크립트를 선택 영역의 블록 데이터로 바꿉니다. 공기도 포함됩니다.",()->BridgeClient.send(BridgePacket.EXPORT));
+            if(applyCoordinates())confirm("스크립트화", "현재 스크립트를 선택 영역의 블록 데이터로 바꿉니다. 공기 블록은 제외됩니다.",()->BridgeClient.send(BridgePacket.EXPORT));
         });
         exportUndoButton=button("스크립트화 취소",12+w,bottom+24,w,()->{
             if(BridgeClient.exportUndo==null)return;

@@ -37,4 +37,17 @@ public class BridgeGameTests {
         }
         h.succeed();
     }
+    @GameTest
+    public void exportOmitsAir(GameTestHelper h) throws Exception {
+        var level=h.getLevel();
+        BlockPos p=h.absolutePos(new BlockPos(1,3,1));
+        Region r=Region.of(p.getX(),p.getY(),p.getZ(),p.getX()+1,p.getY(),p.getZ());
+        List<BridgeServer.Cell> original=List.of(BridgeServer.snapshot(level,p),BridgeServer.snapshot(level,p.east()));
+        BridgeServer.apply(level,BridgeServer.prepare(level,r,"0 0 0 | minecraft:stone\n1 0 0 | minecraft:air"));
+        String exported=BridgeServer.exportRegion(level,r);
+        h.assertTrue(Script.parse(exported,r).size()==1,"Export should contain only the non-air block: "+exported);
+        h.assertTrue(!exported.contains("minecraft:air"),"Export contained an air block: "+exported);
+        BridgeServer.apply(level,original);
+        h.succeed();
+    }
 }

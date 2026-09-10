@@ -79,9 +79,10 @@ public final class BridgeServer {
     }
     static String exportRegion(ServerLevel level,Region r) {
         StringBuilder text=new StringBuilder("# AI Block Bridge Script v1\n# size: "+r.sizeX()+" "+r.sizeY()+" "+r.sizeZ()+
-            "\n# origin: "+r.x()+" "+r.y()+" "+r.z()+"\n# Includes air. Unlisted coordinates are unchanged on paste.\n");
+            "\n# origin: "+r.x()+" "+r.y()+" "+r.z()+"\n# Air is omitted. Unlisted coordinates are unchanged on paste.\n");
         for(BlockPos p:BlockPos.betweenClosed(r.x(),r.y(),r.z(),r.maxX(),r.maxY(),r.maxZ())) {
             Cell cell=snapshot(level,p);
+            if(cell.state.isAir()) continue;
             text.append(p.getX()-r.x()).append(' ').append(p.getY()-r.y()).append(' ').append(p.getZ()-r.z())
                 .append(" | ").append(BlockStateParser.serialize(cell.state));
             if(cell.nbt!=null) {
