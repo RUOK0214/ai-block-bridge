@@ -3,10 +3,35 @@
   "id": "ai_block_bridge",
   "version": "${version}",
   "name": "AI Block Bridge",
-  "description": "Select, inspect and edit blocks using local-coordinate text scripts.",
-  "authors": ["RUOK0214"],
-  "contact": {"sources": "https://github.com/RUOK0214/ai-block-bridge"},
+  "description": "Share redstone circuit structures and tick-by-tick changes as text, and apply AI-generated block placement scripts in Minecraft.\n\nQuick start\n1. Aim at blocks and press [ / ] to select two corners.\n2. Press B to open the editor, capture the structure, or copy an AI request.\n3. Press N to start recording, operate the circuit, then press N again to stop.\n4. Choose Save recording set to save structure.txt and timeline.txt together in a new folder. Attach both files to your AI chat.\n5. Paste the AI-generated placement script into the block editor, apply it, and check the circuit in-game.\n\nDefault controls\nB: editor · [: first corner · ]: second corner\nN: start/stop/retrieve recording · \\: toggle selection overlay\nRebind keys in Options → Controls.\n\nRequirements\nWorld editing requires cheats or OP level 4 permission. Install the mod on both server and client for multiplayer.\nUse file attachments and copied prompts with your AI chat; the mod does not send requests to an AI service automatically.\n\nQuestions and world downloads: Discord link below\nCreated by RUOK0214",
+  "authors": [
+    "RUOK0214"
+  ],
+  "contact": {
+    "sources": "https://github.com/RUOK0214/ai-block-bridge",
+    "homepage": "https://discord.gg/95secUdgMK"
+  },
   "environment": "*",
-  "entrypoints": {"main": ["io.github.ruok0214.bridge.BridgeMod"], "client": ["io.github.ruok0214.bridge.client.BridgeClient"]},
-  "depends": {"fabricloader": ">=0.19.5", "minecraft": "~26.2", "java": ">=25", "fabric-api": ">=0.160.0"}
+  "entrypoints": {
+    "main": [
+      "io.github.ruok0214.bridge.BridgeMod"
+    ],
+    "client": [
+      "io.github.ruok0214.bridge.client.BridgeClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "~26.2",
+    "java": ">=25",
+    "fabric-api": ">=0.160.0"
+  },
+  "icon": "assets/ai_block_bridge/icon.png",
+  "custom": {
+    "modmenu": {
+      "links": {
+        "ai_block_bridge.modmenu.discord": "https://discord.gg/95secUdgMK"
+      }
+    }
+  }
 }
