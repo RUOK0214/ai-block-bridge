@@ -63,7 +63,7 @@
   "ai_block_bridge.timeline.title": "AI Block Bridge · 틱 기록",
   "ai_block_bridge.button.record_start": "기록 시작",
   "ai_block_bridge.confirm.record_title": "틱 기록 시작",
-  "ai_block_bridge.confirm.record": "현재 선택 영역에서 이후 틱의 변화만 기록합니다. 시작 후 창이 닫힙니다.",
+  "ai_block_bridge.confirm.record": "선택 영역의 초기 구조를 캡처하고 틱 기록을 시작할까요? 기록 중에는 화면을 닫고 회로를 작동시키세요.",
   "ai_block_bridge.button.record_stop": "기록 중지",
   "ai_block_bridge.button.script": "배치 스크립트",
   "ai_block_bridge.editor.timeline": "틱 기록 스크립트",
@@ -99,7 +99,7 @@
   "ai_block_bridge.error.rate_limit": "1초 후 다시 시도하세요.",
   "ai_block_bridge.error.restart_transfer": "전송을 다시 시작하세요.",
   "ai_block_bridge.error.already_recording": "이미 틱 변화를 기록하고 있습니다.",
-  "ai_block_bridge.timeline.started": "틱 기록 시작. 회로를 작동한 뒤 기록 중지 키를 누르세요.",
+  "ai_block_bridge.timeline.started": "기록 시작: 초기 구조도 캡처했습니다.",
   "ai_block_bridge.error.not_recording": "진행 중인 틱 기록이 없습니다.",
   "ai_block_bridge.error.world_bounds": "월드 높이 또는 월드 경계를 벗어났습니다.",
   "ai_block_bridge.error.unloaded": "불러오지 않은 청크입니다. 영역 가까이 이동하세요.",
@@ -141,5 +141,7 @@
   "ai_block_bridge.recording.stop.entries_partial": "변경 항목 %s개 제한입니다. 마지막 틱 전체를 제외했습니다.",
   "ai_block_bridge.recording.stop.size_partial": "기록 용량 %s자 제한입니다. 마지막 틱 전체를 제외했습니다.",
   "ai_block_bridge.recording.stop.unavailable": "영역을 불러올 수 없어 기록을 중지했습니다.",
-  "ai_block_bridge.recording.banner": "기록 자동 중지 · 자세한 사유는 채팅에서 확인하세요."
+  "ai_block_bridge.recording.banner": "기록 자동 중지 · 자세한 사유는 채팅에서 확인하세요.",
+  "ai_block_bridge.bundle.save": "기록 세트 저장 (원본 구조 + 타임라인)",
+  "ai_block_bridge.bundle.directory": "기록 폴더를 만들 위치 선택"
 }

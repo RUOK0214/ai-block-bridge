@@ -125,3 +125,11 @@ Java 25에서 실행합니다. 단위 테스트와 서버 GameTest가 포함됩�
 ## 프로젝트 기반
 
 개발 설정과 Gradle wrapper는 Fabric 공식 예제 프로젝트를 기반으로 합니다. 기존 템플릿 라이선스는 `LICENSE`에 보존했습니다.
+
+
+### 0.1.8: 구조와 타임라인 세트 저장
+기록 시작 시 선택 영역의 초기 구조도 자동으로 캡처합니다. 기록 종료 또는 제한 도달 후 기록을 가져온 다음, 타임라인 화면의 **기록 세트 저장 (원본 구조 + 타임라인)** 을 누르고 저장 위치를 선택하세요. 새 `recording_날짜_시간_고유번호` 폴더 안에 `structure.txt`와 `timeline.txt`가 저장됩니다. 두 파일을 함께 AI에 첨부하면 됩니다.
+
+세트 저장은 가장 최근에 가져온 기록 원본을 저장합니다. 편집기 수정·다른 파일 가져오기는 기록 원본에 영향을 주지 않습니다. 편집한 타임라인만 저장하려면 기존 내보내기를 사용하세요. 새 기록을 가져오면 이전 세트가 교체되므로 필요한 기록은 먼저 저장하세요. 구조 캡처가 크기 제한을 넘으면 기록을 시작하지 않습니다. 멀티플레이에서는 서버와 클라이언트 모두 0.1.8로 업데이트하세요.
+
+Recording now captures the initial structure automatically. After retrieving a recording, choose **Save recording set (original structure + timeline)** and select a parent directory. A new timestamped, unique folder contains `structure.txt` and `timeline.txt`. This saves the latest original recording, independently of editor changes/imports; use the existing Export button for edited timeline text. Save each set before retrieving another recording. Update both server and client to 0.1.8.

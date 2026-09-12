@@ -20,6 +20,12 @@ public final class ScriptFiles {
             :TinyFileDialogs.tinyfd_openFileDialog(Messages.display(Messages.text("ai_block_bridge.dialog.import")),initial,null,Messages.display(Messages.text("ai_block_bridge.dialog.text")),false);
         return chosen==null?null:Path.of(chosen);
     }
+    public static Path chooseDirectory() throws IOException {
+        Path directory=FabricLoader.getInstance().getGameDir().resolve("ai-block-bridge").toAbsolutePath();
+        Files.createDirectories(directory);
+        String chosen=TinyFileDialogs.tinyfd_selectFolderDialog(Messages.display(Messages.text("ai_block_bridge.bundle.directory")),directory.toString());
+        return chosen==null?null:Path.of(chosen);
+    }
     public static String read(Path file) throws IOException {
         return read(file,Script.MAX_CHARS);
     }

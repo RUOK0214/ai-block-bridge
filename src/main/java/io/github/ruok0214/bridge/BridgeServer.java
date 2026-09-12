@@ -83,8 +83,8 @@ public final class BridgeServer {
     private static void stopRecording(ServerPlayer player,BridgePacket packet) {
         Recording recording=recordings.remove(player.getUUID());
         if(recording==null) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.not_recording"));
-        String result=recording.recorder.result();
-        packet.chunks(result,BridgePacket.TIMELINE,p->ServerPlayNetworking.send(player,p));
+        String result=recording.recorder.bundle().encode();
+        packet.chunks(result,BridgePacket.RECORDING_BUNDLE,p->ServerPlayNetworking.send(player,p));
     }
     private static String safeMessage(Exception ex) {
         String s=ex.getMessage()==null?ex.getClass().getSimpleName():ex.getMessage();

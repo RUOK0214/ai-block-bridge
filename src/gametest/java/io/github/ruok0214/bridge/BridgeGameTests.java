@@ -10,6 +10,25 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 public class BridgeGameTests {
     @GameTest(structure="ai_block_bridge_test:large_empty")
+    public void recordingBundleKeepsInitialStructure(GameTestHelper h) {
+        var level=h.getLevel();
+        BlockPos p=h.absolutePos(new BlockPos(1,1,1));
+        level.setBlock(p,Blocks.STONE.defaultBlockState(),Block.UPDATE_ALL);
+        Region region=Region.of(p.getX(),p.getY(),p.getZ(),p.getX(),p.getY(),p.getZ());
+        TickRecorder recorder=new TickRecorder(level,region,true,1,100,4096);
+        level.setBlock(p,Blocks.GOLD_BLOCK.defaultBlockState(),Block.UPDATE_ALL);
+        recorder.capture(level);
+        RecordingBundle bundle=recorder.bundle();
+        h.assertTrue(bundle.structure().contains("minecraft:stone")&&!bundle.structure().contains("minecraft:gold_block"),"Initial snapshot changed");
+        h.assertTrue(bundle.timeline().contains("@tick 1")&&bundle.timeline().contains("minecraft:gold_block"),"Timeline lost changes");
+        h.assertTrue(recorder.stopped(),"Limit should stop recording");
+        level.setBlock(p,Blocks.AIR.defaultBlockState(),Block.UPDATE_ALL);
+        recorder.capture(level);
+        h.assertTrue(bundle.equals(recorder.bundle()),"Stopped recording bundle changed");
+        h.succeed();
+    }
+
+    @GameTest(structure="ai_block_bridge_test:large_empty")
     public void recordingLimitNoticesPreserveCompletedTicks(GameTestHelper h) {
         var level=h.getLevel();
         BlockPos p=h.absolutePos(new BlockPos(1,1,1));
