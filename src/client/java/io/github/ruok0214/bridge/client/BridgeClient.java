@@ -10,7 +10,6 @@ import net.minecraft.client.KeyMapping;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import org.lwjgl.glfw.GLFW;
@@ -18,10 +17,10 @@ import org.lwjgl.glfw.GLFW;
 public final class BridgeClient implements ClientModInitializer {
     public static BlockPos a,b;
     public static String dimension="", script="# AI Block Bridge Script v1\n# x y z | block[state] | {NBT}\n0 0 0 | minecraft:stone\n";
-    public static String status="모서리 1·2를 선택하세요. 기본 키: [ / ] / 설정창: B";
+    public static String status=Messages.text("ai_block_bridge.select_hint");
     public static String exportUndo;
-    public static String timeline="# AI Block Bridge Timeline v1\n# 기록 시작 이후 달라진 블록이 @tick 순서로 표시됩니다.\n";
-    public static String timelineStatus="선택 영역을 정한 뒤 틱 기록을 시작하세요.";
+    public static String timeline="# AI Block Bridge Timeline v1\n# Changes after recording starts are listed in @tick order.\n";
+    public static String timelineStatus=Messages.text("ai_block_bridge.timeline.ready");
     public static boolean recording;
     public static boolean ignoreHopperCooldown=true;
     public static boolean showSelection=true;
@@ -48,14 +47,14 @@ public final class BridgeClient implements ClientModInitializer {
             String current=mc.level.dimension().identifier().toString();
             if(!dimension.equals(current)) { a=null;b=null;dimension=current;pending=-1;pendingAction=-1;response=null;recording=false; }
             if(busy() && System.nanoTime()-sentAt>30_000_000_000L) {
-                pending=-1;pendingAction=-1;response=null;status=timelineStatus="응답 시간 초과. 월드 상태를 확인한 뒤 다시 시도하세요.";
+                pending=-1;pendingAction=-1;response=null;status=timelineStatus=Messages.text("ai_block_bridge.error.timeout");
             }
             if(mc.gui.screen()==null) {
                 while(first.consumeClick()) select(mc,true);
                 while(second.consumeClick()) select(mc,false);
                 while(overlay.consumeClick()) {
                     showSelection=!showSelection;
-                    if(mc.player!=null)mc.player.sendSystemMessage(Component.literal("선택 영역 표시: "+(showSelection?"켜짐":"꺼짐")));
+                    if(mc.player!=null)mc.player.sendSystemMessage(Messages.component(Messages.text("ai_block_bridge.overlay", Messages.text(showSelection?"ai_block_bridge.on":"ai_block_bridge.off"))));
                 }
                 while(record.consumeClick()) send(recording?BridgePacket.STOP_RECORD:BridgePacket.START_RECORD);
                 while(open.consumeClick()) mc.gui.setScreen(new BridgeScreen());
@@ -71,14 +70,14 @@ public final class BridgeClient implements ClientModInitializer {
                 if(body==null)return;
                 if(packet.action()==BridgePacket.SCRIPT) {
                     exportUndo=exportBefore;
-                    replace(body);status="스크립트화 완료. 공기 블록은 제외했습니다.";
+                    replace(body);status=Messages.text("ai_block_bridge.captured");
                 } else if(packet.action()==BridgePacket.TIMELINE) {
                     replaceTimeline(body);recording=false;
-                    status=timelineStatus="틱 기록 완료. 기록 스크립트 창에서 확인할 수 있습니다.";
+                    status=timelineStatus=Messages.text("ai_block_bridge.timeline.complete");
                 } else {
                     status=timelineStatus=body;
-                    if(pendingAction==BridgePacket.START_RECORD&&!body.startsWith("오류:"))recording=true;
-                    if(pendingAction==BridgePacket.STOP_RECORD&&body.startsWith("오류:"))recording=false;
+                    if(pendingAction==BridgePacket.START_RECORD&&!Messages.isError(body))recording=true;
+                    if(pendingAction==BridgePacket.STOP_RECORD&&Messages.isError(body))recording=false;
                 }
                 pending=-1;pendingAction=-1;response=null;
                 if(ctx.client().gui.screen() instanceof BridgeScreen screen) screen.syncText();
@@ -91,12 +90,12 @@ public final class BridgeClient implements ClientModInitializer {
         if(busy())return;
         if(mc.hitResult instanceof BlockHitResult hit && hit.getType()==HitResult.Type.BLOCK) {
             if(first)a=hit.getBlockPos().immutable();else b=hit.getBlockPos().immutable();
-            status="모서리 "+(first?1:2)+": "+hit.getBlockPos().toShortString();
-        }else status="블록을 바라본 상태에서 선택 키를 누르세요.";
-        if(mc.player!=null)mc.player.sendSystemMessage(Component.literal(status));
+            status=Messages.text("ai_block_bridge.corner_selected", first?1:2, hit.getBlockPos().toShortString());
+        }else status=Messages.text("ai_block_bridge.error.target");
+        if(mc.player!=null)mc.player.sendSystemMessage(Messages.component(status));
     }
     public static Region region() {
-        if(a==null||b==null)throw new IllegalArgumentException("모서리 1과 2를 모두 선택하세요.");
+        if(a==null||b==null)throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.corners"));
         return Region.of(a.getX(),a.getY(),a.getZ(),b.getX(),b.getY(),b.getZ());
     }
     public static void replace(String value) {
@@ -108,13 +107,13 @@ public final class BridgeClient implements ClientModInitializer {
     public static void send(int action) {
         if(busy())return;
         try {
-            if(!ClientPlayNetworking.canSend(BridgePacket.TYPE))throw new IllegalArgumentException("서버에 AI Block Bridge 모드가 필요합니다.");
+            if(!ClientPlayNetworking.canSend(BridgePacket.TYPE))throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.server_mod"));
             Region r=(action==BridgePacket.UNDO||action==BridgePacket.STOP_RECORD)?Region.of(0,0,0,0,0,0):region();
             pending=++requestId;pendingAction=action;sentAt=System.nanoTime();response=null;
             exportBefore=script;
             var packet=new BridgePacket(pending,action,0,1,dimension,r.x(),r.y(),r.z(),r.maxX(),r.maxY(),r.maxZ(),"");
             packet.chunks(action==BridgePacket.PASTE?script:action==BridgePacket.START_RECORD&&!ignoreHopperCooldown?"include-cooldown":"",action,ClientPlayNetworking::send);
-            status="서버에서 처리 중…";
+            status=Messages.text("ai_block_bridge.processing");
         }catch(Exception ex){pending=-1;pendingAction=-1;status=timelineStatus=ex.getMessage();}
     }
 }
