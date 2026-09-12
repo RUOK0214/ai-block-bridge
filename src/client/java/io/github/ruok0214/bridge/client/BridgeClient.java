@@ -21,6 +21,7 @@ public final class BridgeClient implements ClientModInitializer {
     public static String exportUndo;
     public static String timeline="# AI Block Bridge Timeline v1\n# Changes after recording starts are listed in @tick order.\n";
     public static String timelineStatus=Messages.text("ai_block_bridge.timeline.ready");
+    public static RecordingBundle recordingBundle;
     public static boolean recording;
     public static boolean recordingAvailable;
     private static String recordingStopReason;
@@ -82,8 +83,9 @@ public final class BridgeClient implements ClientModInitializer {
                 if(packet.action()==BridgePacket.SCRIPT) {
                     exportUndo=exportBefore;
                     replace(body);status=Messages.text("ai_block_bridge.captured");
-                } else if(packet.action()==BridgePacket.TIMELINE) {
-                    replaceTimeline(body);recording=false;recordingAvailable=false;
+                } else if(packet.action()==BridgePacket.TIMELINE||packet.action()==BridgePacket.RECORDING_BUNDLE) {
+                    RecordingBundle received=packet.action()==BridgePacket.RECORDING_BUNDLE?RecordingBundle.decode(body):null;
+                    replaceTimeline(received==null?body:received.timeline());recordingBundle=received;recording=false;recordingAvailable=false;
                     status=timelineStatus=recordingStopReason==null?Messages.text("ai_block_bridge.timeline.complete")
                         :Messages.text("ai_block_bridge.recording.retrieved",recordingStopReason);
                 } else {
@@ -94,7 +96,7 @@ public final class BridgeClient implements ClientModInitializer {
                 pending=-1;pendingAction=-1;response=null;
                 if(ctx.client().gui.screen() instanceof BridgeScreen screen) screen.syncText();
                 if(ctx.client().gui.screen() instanceof TimelineScreen screen) screen.syncText();
-                else if(packet.action()==BridgePacket.TIMELINE&&ctx.client().gui.screen()==null)ctx.client().gui.setScreen(new TimelineScreen());
+                else if((packet.action()==BridgePacket.TIMELINE||packet.action()==BridgePacket.RECORDING_BUNDLE)&&ctx.client().gui.screen()==null)ctx.client().gui.setScreen(new TimelineScreen());
             }catch(Exception ex){pending=-1;pendingAction=-1;response=null;status=timelineStatus=ex.getMessage();}
         });
     }

@@ -63,7 +63,7 @@
   "ai_block_bridge.timeline.title": "AI Block Bridge · Timeline",
   "ai_block_bridge.button.record_start": "Start",
   "ai_block_bridge.confirm.record_title": "Start tick recording",
-  "ai_block_bridge.confirm.record": "Record subsequent tick changes in the selected region. This screen closes when recording starts.",
+  "ai_block_bridge.confirm.record": "Capture the initial structure and start recording this region? Close this screen and operate the circuit while recording.",
   "ai_block_bridge.button.record_stop": "Stop",
   "ai_block_bridge.button.script": "Block script",
   "ai_block_bridge.editor.timeline": "Tick recording script",
@@ -99,7 +99,7 @@
   "ai_block_bridge.error.rate_limit": "Try again in one second.",
   "ai_block_bridge.error.restart_transfer": "Restart the transfer.",
   "ai_block_bridge.error.already_recording": "Tick recording is already running.",
-  "ai_block_bridge.timeline.started": "Recording started. Run the circuit, then press the recording key to stop.",
+  "ai_block_bridge.timeline.started": "Recording started; initial structure captured.",
   "ai_block_bridge.error.not_recording": "No tick recording is running.",
   "ai_block_bridge.error.world_bounds": "Outside the world height limits or world border.",
   "ai_block_bridge.error.unloaded": "Chunk not loaded. Move closer to the region.",
@@ -141,5 +141,7 @@
   "ai_block_bridge.recording.stop.entries_partial": "Reached the %s-entry limit. The entire final tick was omitted.",
   "ai_block_bridge.recording.stop.size_partial": "Reached the %s-character limit. The entire final tick was omitted.",
   "ai_block_bridge.recording.stop.unavailable": "Stopped because the region is no longer loaded.",
-  "ai_block_bridge.recording.banner": "Recording stopped · See chat for the reason."
+  "ai_block_bridge.recording.banner": "Recording stopped · See chat for the reason.",
+  "ai_block_bridge.bundle.save": "Save recording set (original structure + timeline)",
+  "ai_block_bridge.bundle.directory": "Choose where to create the recording folder"
 }

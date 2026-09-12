@@ -12,6 +12,7 @@ final class TickRecorder {
     static final int MAX_TICKS=6000, MAX_CHANGES=100_000;
     private final boolean ignoreHopperCooldown;
     private final Region region;
+    private final String initialStructure;
     private final BlockState[] previousStates;
     private final Map<Integer,CompoundTag> previousNbt=new HashMap<>();
     private final StringBuilder text;
@@ -33,6 +34,8 @@ final class TickRecorder {
         this.maxTicks=maxTicks;this.maxChanges=maxChanges;this.maxChars=maxChars;
         this.ignoreHopperCooldown=ignoreHopperCooldown;
         this.region=region;
+        // Both snapshots run on the server thread before another tick can advance.
+        this.initialStructure=BridgeServer.exportRegion(level,region);
         this.previousStates=new BlockState[region.volume()];
         int index=0;
         for(BlockPos p:positions()) {
@@ -46,6 +49,7 @@ final class TickRecorder {
             "\n# origin: "+region.x()+" "+region.y()+" "+region.z()+
             "\n# Only changes after recording started. @tick is a server-tick offset.\n# ignore hopper TransferCooldown: "+ignoreHopperCooldown+"\n");
     }
+    RecordingBundle bundle(){return new RecordingBundle(initialStructure,result());}
     void capture(ServerLevel level) {
         if(stopped)return;
         tick++;

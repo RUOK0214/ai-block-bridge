@@ -11,7 +11,7 @@ import org.lwjgl.glfw.GLFW;
 /** Editor for recorded tick order. It is intentionally separate from the placement script. */
 public final class TimelineScreen extends Screen {
     private MultiLineEditBox editor;
-    private Button start,stop,load,save,copy,undo,filter;
+    private Button start,stop,load,save,copy,undo,filter,bundle;
     private boolean syncing;
     public TimelineScreen(){super(Messages.component(Messages.text("ai_block_bridge.timeline.title")));}
     private Button button(String title,int x,int y,int w,Runnable action) {
@@ -31,9 +31,11 @@ public final class TimelineScreen extends Screen {
             filter.setMessage(Messages.component(filterLabel()));
         });
         editor=MultiLineEditBox.builder().setX(8).setY(98).setShowDecorations(true)
-            .build(font,width-16,Math.max(40,height-173),Messages.component(Messages.text("ai_block_bridge.editor.timeline")));
+            .build(font,width-16,Math.max(40,height-197),Messages.component(Messages.text("ai_block_bridge.editor.timeline")));
         editor.setCharacterLimit(Script.MAX_TIMELINE_CHARS);editor.setValue(BridgeClient.timeline);
         editor.setValueListener(value->{if(!syncing)BridgeClient.replaceTimeline(value);});addRenderableWidget(editor);
+        bundle=button(Messages.text("ai_block_bridge.bundle.save"),8,height-91,width-16,this::exportBundle);
+        bundle.active=BridgeClient.recordingBundle!=null;
         int bottom=height-67;
         load=button(Messages.text("ai_block_bridge.button.import"),8,bottom,w,this::importFile);
         save=button(Messages.text("ai_block_bridge.button.export"),12+w,bottom,w,this::exportFile);
@@ -51,11 +53,18 @@ public final class TimelineScreen extends Screen {
         Path file=ScriptFiles.choose(false,"timeline.txt");if(file==null)return;String value=ScriptFiles.read(file,Script.MAX_TIMELINE_CHARS);
         confirm(Messages.text("ai_block_bridge.timeline.import_title"),Messages.text("ai_block_bridge.confirm.import_timeline", file.getFileName()),()->{BridgeClient.replaceTimeline(value);syncText();BridgeClient.timelineStatus=Messages.text("ai_block_bridge.loaded", file.getFileName());});
     }catch(Exception ex){BridgeClient.timelineStatus=Messages.text("ai_block_bridge.load_failed", ex.getMessage());}}
+    private void exportBundle(){try{
+        RecordingBundle original=BridgeClient.recordingBundle;if(original==null)return;
+        Path parent=ScriptFiles.chooseDirectory();if(parent==null)return;
+        Path folder=RecordingFiles.save(parent,original);
+        BridgeClient.timelineStatus=Messages.text("ai_block_bridge.saved",folder);
+    }catch(Exception ex){BridgeClient.timelineStatus=Messages.text("ai_block_bridge.save_failed",ex.getMessage());}}
     private void exportFile(){try{
         Path file=ScriptFiles.choose(true,"timeline.txt");if(file==null)return;Runnable write=()->{try{ScriptFiles.write(file,BridgeClient.timeline);BridgeClient.timelineStatus=Messages.text("ai_block_bridge.saved", file.getFileName());}catch(Exception ex){BridgeClient.timelineStatus=Messages.text("ai_block_bridge.save_failed", ex.getMessage());}};
         if(Files.exists(file))confirm(Messages.text("ai_block_bridge.confirm.overwrite_title"),Messages.text("ai_block_bridge.confirm.overwrite", file.getFileName()),write);else write.run();
     }catch(Exception ex){BridgeClient.timelineStatus=Messages.text("ai_block_bridge.save_failed", ex.getMessage());}}
     @Override public void tick(){
+        bundle.active=!BridgeClient.busy()&&!BridgeClient.recording&&BridgeClient.recordingBundle!=null;
         filter.active=!BridgeClient.busy()&&!BridgeClient.recording;
         boolean idle=!BridgeClient.busy();start.active=idle&&!BridgeClient.recording&&!BridgeClient.recordingAvailable;stop.active=idle&&(BridgeClient.recording||BridgeClient.recordingAvailable);
         stop.setMessage(Messages.component(Messages.text(BridgeClient.recordingAvailable?"ai_block_bridge.recording.retrieve":"ai_block_bridge.button.record_stop")));
