@@ -2,16 +2,16 @@
 
 Minecraft **Java 26.2 / Fabric** — 제작자 **RUOK0214**.
 AI와 블록 배치 데이터를 텍스트로 주고받기 위한 모드입니다. AI API나 인터넷 연결은 사용하지 않습니다.
-현재 버전: **0.1.4**. 중요한 월드의 복사본에서 먼저 테스트하세요.
+현재 버전: **0.1.11**. 중요한 월드의 복사본에서 먼저 테스트하세요.
 
 ## 설치
 
 1. Fabric Loader **0.19.5 이상**, Minecraft **26.2**를 사용합니다.
-2. `ai-block-bridge-0.1.7.jar`와 Fabric API **0.160.0+26.2 이상(26.2용)**을 `mods` 폴더에 넣습니다. 기존 버전 JAR는 제거합니다.
+2. `ai-block-bridge-0.1.11.jar`와 Fabric API **0.160.0+26.2 이상(26.2용)**을 `mods` 폴더에 넣습니다. 기존 버전 JAR는 제거합니다.
 3. 싱글플레이는 **치트 허용**이 필요합니다. 멀티플레이는 서버·클라이언트 양쪽에 설치하고 **OP 레벨 4**가 필요합니다.
 4. Java 개발·실행 기준은 **Java 25**입니다.
 
-설치 파일은 [Actions](https://github.com/RUOK0214/ai-block-bridge/actions)의 최신 성공한 전체 구현 빌드 → `ai-block-bridge-26.2` 아티팩트에서 받습니다. `-sources.jar`는 설치용이 아닙니다.
+설치 파일은 [최신 릴리스](https://github.com/RUOK0214/ai-block-bridge/releases/latest)에서 받습니다. `-sources.jar`는 설치용이 아닙니다.
 
 ## 언어 지원
 
@@ -124,7 +124,7 @@ Java 25에서 실행합니다. 단위 테스트와 서버 GameTest가 포함됩�
 
 ## 프로젝트 기반
 
-개발 설정과 Gradle wrapper는 Fabric 공식 예제 프로젝트를 기반으로 합니다. 기존 템플릿 라이선스는 `LICENSE`에 보존했습니다.
+개발 설정과 Gradle wrapper는 Fabric 공식 예제 프로젝트를 기반으로 합니다. 기존 CC0 텍스트는 `licenses/CC0-1.0.txt`에 보존했습니다.
 
 
 ### 0.1.8: 구조와 타임라인 세트 저장
@@ -133,3 +133,14 @@ Java 25에서 실행합니다. 단위 테스트와 서버 GameTest가 포함됩�
 세트 저장은 가장 최근에 가져온 기록 원본을 저장합니다. 편집기 수정·다른 파일 가져오기는 기록 원본에 영향을 주지 않습니다. 편집한 타임라인만 저장하려면 기존 내보내기를 사용하세요. 새 기록을 가져오면 이전 세트가 교체되므로 필요한 기록은 먼저 저장하세요. 구조 캡처가 크기 제한을 넘으면 기록을 시작하지 않습니다. 멀티플레이에서는 서버와 클라이언트 모두 0.1.8로 업데이트하세요.
 
 Recording now captures the initial structure automatically. After retrieving a recording, choose **Save recording set (original structure + timeline)** and select a parent directory. A new timestamped, unique folder contains `structure.txt` and `timeline.txt`. This saves the latest original recording, independently of editor changes/imports; use the existing Export button for edited timeline text. Save each set before retrieving another recording. Update both server and client to 0.1.8.
+
+
+## 라이선스 / License
+
+**MIT License · Copyright (c) 2026 RUOK0214**
+
+0.1.11부터 MIT 라이선스로 배포합니다. 사용·수정·재배포·상업적 이용을 허용하며, 복제본이나 상당 부분을 재사용할 때 저작권 고지와 라이선스 고지를 포함해야 합니다. [LICENSE](LICENSE)와 [NOTICE](NOTICE)를 참고하세요.
+
+**0.1.10까지 CC0로 공개된 기존 부분의 이용 권한은 유지됩니다.** MIT 전환은 기존 CC0 권한을 취소하거나 소급하여 제한하지 않습니다. 외부 구성요소는 각자의 라이선스를 유지합니다.
+
+From 0.1.11, the project is distributed under MIT. Preserve the copyright and license notice when redistributing copies or substantial portions. Historical material published through 0.1.10 remains available under CC0; this change does not revoke those permissions. New copyrightable contributions owned by RUOK0214 are offered under MIT. See LICENSE and NOTICE for scope and third-party notices.

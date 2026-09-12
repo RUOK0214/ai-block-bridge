@@ -1,0 +1,26 @@
+AI Block Bridge
+Copyright (c) 2026 RUOK0214
+
+From version 0.1.11, this project is distributed under the MIT License
+(see LICENSE), subject to the historical and third-party notices below.
+
+Historical CC0 material
+Versions through 0.1.10 were published with CC0 1.0 Universal. The MIT
+notice does not revoke, restrict, or replace the CC0 freedoms already
+granted for that material. The previous CC0 text is preserved in
+licenses/CC0-1.0.txt. The v0.1.10 tag identifies the previously published
+source: https://github.com/RUOK0214/ai-block-bridge/tree/v0.1.10
+New copyrightable contributions owned by RUOK0214 are offered under MIT.
+
+Third-party material
+The original development template is based on Fabric's example mod,
+provided under CC0. Gradle wrapper files retain their original Apache-2.0
+notices and are not relicensed by this MIT notice. Minecraft, Fabric,
+Gradle, and other dependencies remain under their respective terms.
+
+한국어 안내
+0.1.11부터 프로젝트의 배포 라이선스를 MIT로 명시합니다.
+0.1.10까지 CC0로 공개된 기존 부분의 이용 권한은 그대로 유지됩니다.
+기존 공개 부분을 소급하여 MIT 조건으로 제한하지 않습니다.
+RUOK0214가 권리를 가진 새로운 저작물·변경분에 MIT를 적용합니다.
+외부 구성요소에는 각 구성요소의 기존 라이선스가 적용됩니다.

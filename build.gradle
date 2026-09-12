@@ -13,6 +13,7 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 processResources {
+    from(rootProject.projectDir) { include 'LICENSE', 'NOTICE', 'licenses/CC0-1.0.txt' }
     inputs.property 'version', project.version
     filesMatching('fabric.mod.json') {
         expand(['version': project.version]) { escapeBackslash = true }
@@ -36,4 +37,9 @@ fabricApi {
         enableGameTests = true
         enableClientGameTests = true
     }
+}
+
+// Include the same licensing notices with source distributions.
+tasks.named('sourcesJar') {
+    from(rootProject.projectDir) { include 'LICENSE', 'NOTICE', 'licenses/CC0-1.0.txt' }
 }

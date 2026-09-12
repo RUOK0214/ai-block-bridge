@@ -33,5 +33,6 @@
         "ai_block_bridge.modmenu.discord": "https://discord.gg/95secUdgMK"
       }
     }
-  }
+  },
+  "license": "MIT"
 }
