@@ -24,15 +24,18 @@ public final class BridgeServer {
     private static final Map<UUID,Undo> undos=new HashMap<>();
     private static final Map<UUID,Recording> recordings=new HashMap<>();
     private static final Map<UUID,Long> lastRequest=new HashMap<>();
-    private record Recording(String dimension,TickRecorder recorder) {}
+    private record Recording(String dimension,TickRecorder recorder,BridgePacket request) {}
     public static void clear(UUID id) { incoming.remove(id);undos.remove(id);recordings.remove(id);lastRequest.remove(id); }
     public static void clearAll() { incoming.clear();undos.clear();recordings.clear();lastRequest.clear(); }
     public static void tick(MinecraftServer server) {
         for(var entry:recordings.entrySet()) {
             ServerPlayer player=server.getPlayerList().getPlayer(entry.getKey());
             Recording recording=entry.getValue();
-            if(player!=null && recording.dimension.equals(player.level().dimension().identifier().toString()) && !recording.recorder.stopped())
-                recording.recorder.capture(player.level());
+            if(player!=null && recording.dimension.equals(player.level().dimension().identifier().toString())) {
+                if(!recording.recorder.stopped())recording.recorder.capture(player.level());
+                String notice=recording.recorder.takeStopNotice();
+                if(notice!=null)recording.request.chunks(notice,BridgePacket.RECORD_STOPPED,p->ServerPlayNetworking.send(player,p));
+            }
         }
     }
     public static void receive(ServerPlayer player,BridgePacket packet) {
@@ -74,7 +77,7 @@ public final class BridgeServer {
     }
     private static void startRecording(ServerPlayer player,BridgePacket packet,ServerLevel level,Region region) {
         if(recordings.containsKey(player.getUUID())) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.already_recording"));
-        recordings.put(player.getUUID(),new Recording(packet.dimension(),new TickRecorder(level,region,!packet.text().equals("include-cooldown"))));
+        recordings.put(player.getUUID(),new Recording(packet.dimension(),new TickRecorder(level,region,!packet.text().equals("include-cooldown")),packet));
         reply(player,packet,Messages.text("ai_block_bridge.timeline.started"));
     }
     private static void stopRecording(ServerPlayer player,BridgePacket packet) {

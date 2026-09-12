@@ -2,6 +2,7 @@ package io.github.ruok0214.bridge;
 
 import io.github.ruok0214.bridge.client.BridgeClient;
 import io.github.ruok0214.bridge.client.BridgeScreen;
+import io.github.ruok0214.bridge.client.AiPromptScreen;
 import io.github.ruok0214.bridge.client.TimelineScreen;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
@@ -57,10 +58,33 @@ public final class SelectionClientTest implements FabricClientGameTest {
             context.setScreen(BridgeScreen::new);
             context.waitForScreen(BridgeScreen.class);
             context.takeScreenshot("script-editor-english");
+            context.runOnClient(mc->{
+                for(String mode:new String[]{"explain","design","fix"}) {
+                    String prompt=AiPromptScreen.createPrompt(mode);
+                    if(!prompt.contains("minecraft:air")||!prompt.contains("@tick")||!prompt.contains("Attachments:"))
+                        throw new AssertionError("Prompt missing syntax or attachment instructions: "+mode);
+                    if(prompt.contains("AI_BLOCK_BRIDGE_MESSAGE:")||prompt.contains("ai_block_bridge.prompt."))
+                        throw new AssertionError("Untranslated prompt: "+mode);
+                }
+                mc.gui.setScreen(new AiPromptScreen(new BridgeScreen()));
+            });
+            context.waitForScreen(AiPromptScreen.class);
+            context.takeScreenshot("ai-request-english");
+            context.runOnClient(mc->{
+                BridgeClient.recording=true;
+                String prior=BridgeClient.timeline;
+                BridgeClient.recordingStopped(Messages.text("ai_block_bridge.recording.stop.time",6000));
+                if(BridgeClient.recording||!BridgeClient.recordingAvailable||!BridgeClient.timeline.equals(prior))
+                    throw new AssertionError("Stop notice lost data or left the recorder running");
+                mc.gui.setScreen(new TimelineScreen());
+            });
+            context.waitTicks(2);
+            context.takeScreenshot("recording-limit-notice");
             context.setScreen(()->null);
         }
         context.runOnClient(mc->{
             if(BridgeClient.a!=null||BridgeClient.b!=null)throw new AssertionError("Selection must clear on disconnect");
+            if(BridgeClient.recordingAvailable)throw new AssertionError("Retained-recording flag must clear on disconnect");
         });
     }
 }

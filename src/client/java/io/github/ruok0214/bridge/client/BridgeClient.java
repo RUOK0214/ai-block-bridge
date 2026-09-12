@@ -22,6 +22,8 @@ public final class BridgeClient implements ClientModInitializer {
     public static String timeline="# AI Block Bridge Timeline v1\n# Changes after recording starts are listed in @tick order.\n";
     public static String timelineStatus=Messages.text("ai_block_bridge.timeline.ready");
     public static boolean recording;
+    public static boolean recordingAvailable;
+    private static String recordingStopReason;
     public static boolean ignoreHopperCooldown=true;
     public static boolean showSelection=true;
     public static final TextHistory history=new TextHistory();
@@ -45,7 +47,7 @@ public final class BridgeClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(mc->{
             if(mc.level==null)return;
             String current=mc.level.dimension().identifier().toString();
-            if(!dimension.equals(current)) { a=null;b=null;dimension=current;pending=-1;pendingAction=-1;response=null;recording=false; }
+            if(!dimension.equals(current)) { a=null;b=null;dimension=current;pending=-1;pendingAction=-1;response=null;recording=false;recordingAvailable=false;recordingStopReason=null; }
             if(busy() && System.nanoTime()-sentAt>30_000_000_000L) {
                 pending=-1;pendingAction=-1;response=null;status=timelineStatus=Messages.text("ai_block_bridge.error.timeout");
             }
@@ -56,12 +58,21 @@ public final class BridgeClient implements ClientModInitializer {
                     showSelection=!showSelection;
                     if(mc.player!=null)mc.player.sendSystemMessage(Messages.component(Messages.text("ai_block_bridge.overlay", Messages.text(showSelection?"ai_block_bridge.on":"ai_block_bridge.off"))));
                 }
-                while(record.consumeClick()) send(recording?BridgePacket.STOP_RECORD:BridgePacket.START_RECORD);
+                while(record.consumeClick()) send(recording||recordingAvailable?BridgePacket.STOP_RECORD:BridgePacket.START_RECORD);
                 while(open.consumeClick()) mc.gui.setScreen(new BridgeScreen());
             }
         });
-        ClientPlayConnectionEvents.DISCONNECT.register((handler,mc)->{a=null;b=null;dimension="";pending=-1;pendingAction=-1;response=null;recording=false;});
+        ClientPlayConnectionEvents.DISCONNECT.register((handler,mc)->{a=null;b=null;dimension="";pending=-1;pendingAction=-1;response=null;recording=false;recordingAvailable=false;recordingStopReason=null;});
         ClientPlayNetworking.registerGlobalReceiver(BridgePacket.TYPE,(packet,ctx)->{
+            // Server-pushed notices are independent of the currently pending request.
+            if(packet.action()==BridgePacket.RECORD_STOPPED) {
+                if(packet.index()==0&&packet.total()==1) {
+                    recordingStopped(packet.text());
+                    if(ctx.client().player!=null)ctx.client().player.sendSystemMessage(Messages.component(timelineStatus));
+                    if(ctx.client().player!=null)ctx.client().player.sendOverlayMessage(Messages.component(Messages.text("ai_block_bridge.recording.banner")));
+                }
+                return;
+            }
             if(packet.request()!=pending)return;
             try {
                 if(packet.index()==0)response=new Assembly(packet);
@@ -72,11 +83,12 @@ public final class BridgeClient implements ClientModInitializer {
                     exportUndo=exportBefore;
                     replace(body);status=Messages.text("ai_block_bridge.captured");
                 } else if(packet.action()==BridgePacket.TIMELINE) {
-                    replaceTimeline(body);recording=false;
-                    status=timelineStatus=Messages.text("ai_block_bridge.timeline.complete");
+                    replaceTimeline(body);recording=false;recordingAvailable=false;
+                    status=timelineStatus=recordingStopReason==null?Messages.text("ai_block_bridge.timeline.complete")
+                        :Messages.text("ai_block_bridge.recording.retrieved",recordingStopReason);
                 } else {
                     status=timelineStatus=body;
-                    if(pendingAction==BridgePacket.START_RECORD&&!Messages.isError(body))recording=true;
+                    if(pendingAction==BridgePacket.START_RECORD&&!Messages.isError(body)&&!recordingAvailable)recording=true;
                     if(pendingAction==BridgePacket.STOP_RECORD&&Messages.isError(body))recording=false;
                 }
                 pending=-1;pendingAction=-1;response=null;
@@ -85,6 +97,10 @@ public final class BridgeClient implements ClientModInitializer {
                 else if(packet.action()==BridgePacket.TIMELINE&&ctx.client().gui.screen()==null)ctx.client().gui.setScreen(new TimelineScreen());
             }catch(Exception ex){pending=-1;pendingAction=-1;response=null;status=timelineStatus=ex.getMessage();}
         });
+    }
+    public static void recordingStopped(String reason) {
+        recording=false;recordingAvailable=true;recordingStopReason=reason;
+        status=timelineStatus=Messages.text("ai_block_bridge.recording.available",reason);
     }
     private static void select(Minecraft mc,boolean first) {
         if(busy())return;
@@ -109,6 +125,10 @@ public final class BridgeClient implements ClientModInitializer {
         try {
             if(!ClientPlayNetworking.canSend(BridgePacket.TYPE))throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.server_mod"));
             Region r=(action==BridgePacket.UNDO||action==BridgePacket.STOP_RECORD)?Region.of(0,0,0,0,0,0):region();
+            if(action==BridgePacket.START_RECORD) {
+                if(recordingAvailable)throw new IllegalArgumentException(Messages.text("ai_block_bridge.recording.retrieve_first"));
+                recordingStopReason=null;
+            }
             pending=++requestId;pendingAction=action;sentAt=System.nanoTime();response=null;
             exportBefore=script;
             var packet=new BridgePacket(pending,action,0,1,dimension,r.x(),r.y(),r.z(),r.maxX(),r.maxY(),r.maxZ(),"");

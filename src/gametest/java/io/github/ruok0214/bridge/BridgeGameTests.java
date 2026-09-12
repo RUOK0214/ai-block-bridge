@@ -9,6 +9,43 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 public class BridgeGameTests {
+    @GameTest(structure="ai_block_bridge_test:large_empty")
+    public void recordingLimitNoticesPreserveCompletedTicks(GameTestHelper h) {
+        var level=h.getLevel();
+        BlockPos p=h.absolutePos(new BlockPos(1,1,1));
+        Region region=Region.of(p.getX(),p.getY(),p.getZ(),p.getX()+11,p.getY(),p.getZ());
+        TickRecorder timed=new TickRecorder(level,region,true,2,100,4096);
+        timed.capture(level);
+        h.assertTrue(timed.takeStopNotice()==null,"Premature time-limit notice");
+        timed.capture(level);
+        h.assertTrue(timed.stopped()&&timed.takeStopNotice().contains("stop.time"),"Missing time-limit notice");
+        String finished=timed.result();
+        timed.capture(level);
+        h.assertTrue(timed.takeStopNotice()==null&&finished.equals(timed.result()),"Stopped recorder changed or notified twice");
+
+        TickRecorder entries=new TickRecorder(level,region,true,10,2,4096);
+        level.setBlock(p,Blocks.GOLD_BLOCK.defaultBlockState(),Block.UPDATE_ALL);
+        entries.capture(level);
+        level.setBlock(p.offset(1,0,0),Blocks.GOLD_BLOCK.defaultBlockState(),Block.UPDATE_ALL);
+        level.setBlock(p.offset(2,0,0),Blocks.GOLD_BLOCK.defaultBlockState(),Block.UPDATE_ALL);
+        entries.capture(level);
+        h.assertTrue(entries.takeStopNotice().contains("stop.entries_partial"),"Missing entry-limit notice");
+        h.assertTrue(entries.result().contains("@tick 1")&&!entries.result().contains("@tick 2"),"Partial tick must not be retained");
+
+        TickRecorder exact=new TickRecorder(level,region,true,10,1,4096);
+        level.setBlock(p,Blocks.STONE.defaultBlockState(),Block.UPDATE_ALL);
+        exact.capture(level);
+        h.assertTrue(exact.takeStopNotice().contains("stop.entries")&&exact.result().contains("@tick 1"),"Exact entry limit must retain the full tick");
+
+        TickRecorder size=new TickRecorder(level,region,true,10,100,1024);
+        level.setBlock(p,Blocks.DIAMOND_BLOCK.defaultBlockState(),Block.UPDATE_ALL);
+        size.capture(level);
+        for(int i=0;i<12;i++)level.setBlock(p.offset(i,0,0),Blocks.OAK_STAIRS.defaultBlockState(),Block.UPDATE_ALL);
+        size.capture(level);
+        h.assertTrue(size.takeStopNotice().contains("stop.size_partial"),"Missing character-limit notice");
+        h.assertTrue(size.result().contains("@tick 1")&&!size.result().contains("@tick 2"),"Size limit discarded completed ticks or retained a partial tick");
+        h.succeed();
+    }
     @GameTest(structure="ai_block_bridge_test:large_empty",maxTicks=2800,skyAccess=true)
     public void sevenSegmentAllInputs(GameTestHelper h) throws Exception {
         var level=h.getLevel();
