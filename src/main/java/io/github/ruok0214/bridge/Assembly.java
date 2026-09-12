@@ -11,9 +11,9 @@ public final class Assembly {
     public String append(BridgePacket p) {
         if(expired() || p.total()<1 || p.total()>BridgePacket.MAX_CHUNKS || p.index()!=next || p.total()!=first.total()
             || p.request()!=first.request() || p.action()!=first.action() || !p.dimension().equals(first.dimension())
-            || !p.region().equals(first.region())) throw new IllegalArgumentException("전송이 중단되거나 순서가 올바르지 않습니다. 다시 시도하세요.");
+            || !p.region().equals(first.region())) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.transfer"));
         text.append(p.text()); next++;
-        if(text.length()>BridgePacket.textLimit(first.action())) throw new IllegalArgumentException("스크립트 크기 제한 초과");
+        if(text.length()>BridgePacket.textLimit(first.action())) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.assembly_limit"));
         return next==p.total()?text.toString():null;
     }
 }

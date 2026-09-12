@@ -27,7 +27,7 @@ public record BridgePacket(int request, int action, int index, int total, String
     public Type<? extends CustomPacketPayload> type() { return TYPE; }
     public Region region() { return Region.of(ax,ay,az,bx,by,bz); }
     public void chunks(String body, int operation, java.util.function.Consumer<BridgePacket> send) {
-        if(body.length()>textLimit(operation)) throw new IllegalArgumentException("스크립트 크기 제한을 초과했습니다.");
+        if(body.length()>textLimit(operation)) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.packet_limit"));
         var parts=new java.util.ArrayList<String>();
         for(int start=0;start<body.length();) {
             int end=Math.min(body.length(),start+CHUNK);

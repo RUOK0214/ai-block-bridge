@@ -1,6 +1,7 @@
 package io.github.ruok0214.bridge;
 
 import io.github.ruok0214.bridge.client.BridgeClient;
+import io.github.ruok0214.bridge.client.BridgeScreen;
 import io.github.ruok0214.bridge.client.TimelineScreen;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
@@ -44,11 +45,18 @@ public final class SelectionClientTest implements FabricClientGameTest {
             context.takeScreenshot("selection-first-corner");
             context.runOnClient(mc->{
                 BridgeClient.timeline="# AI Block Bridge Timeline v1\n\n@tick 1\n0 0 0 | minecraft:lever[powered=true]\n";
-                BridgeClient.timelineStatus="틱 기록 완료";
+                BridgeClient.timelineStatus=Messages.text("ai_block_bridge.timeline.complete");
+                String error=Messages.text("ai_block_bridge.error", Messages.text("ai_block_bridge.error.line", 3,
+                    Messages.text("ai_block_bridge.error.duplicate")));
+                if(!Messages.display(error).equals("Error: Line 3: Duplicate coordinates."))
+                    throw new AssertionError("Nested server error was not localized: "+Messages.display(error));
                 mc.gui.setScreen(new TimelineScreen());
             });
             context.waitForScreen(TimelineScreen.class);
             context.takeScreenshot("timeline-editor");
+            context.setScreen(BridgeScreen::new);
+            context.waitForScreen(BridgeScreen.class);
+            context.takeScreenshot("script-editor-english");
             context.setScreen(()->null);
         }
         context.runOnClient(mc->{

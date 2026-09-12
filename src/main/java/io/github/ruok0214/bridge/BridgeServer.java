@@ -39,21 +39,21 @@ public final class BridgeServer {
         try {
             // Full NBT can contain command blocks; use owner/operator level 4, not merely creative mode.
             if(!player.permissions().hasPermission(Permissions.COMMANDS_OWNER))
-                throw new IllegalArgumentException("치트 허용 싱글플레이 또는 OP 4 권한이 필요합니다.");
+                throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.permission"));
             if(packet.action()!=BridgePacket.EXPORT && packet.action()!=BridgePacket.PASTE && packet.action()!=BridgePacket.UNDO
                 && packet.action()!=BridgePacket.START_RECORD && packet.action()!=BridgePacket.STOP_RECORD)
-                throw new IllegalArgumentException("알 수 없는 작업입니다.");
+                throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.operation"));
             if(!player.level().dimension().identifier().toString().equals(packet.dimension()))
-                throw new IllegalArgumentException("차원이 변경되었습니다. 영역을 다시 선택하세요.");
+                throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.dimension"));
             UUID id=player.getUUID();
             if(packet.index()==0) {
                 long now=System.nanoTime();
-                if(now-lastRequest.getOrDefault(id,0L)<1_000_000_000L) throw new IllegalArgumentException("1초 후 다시 시도하세요.");
+                if(now-lastRequest.getOrDefault(id,0L)<1_000_000_000L) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.rate_limit"));
                 lastRequest.put(id,now);
                 incoming.put(id,new Assembly(packet));
             }
             Assembly assembly=incoming.get(id);
-            if(assembly==null) throw new IllegalArgumentException("전송을 다시 시작하세요.");
+            if(assembly==null) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.restart_transfer"));
             String body=assembly.append(packet);
             if(body==null)return;
             incoming.remove(id);
@@ -69,31 +69,31 @@ public final class BridgeServer {
             } else paste(player,packet,level,region,body);
         } catch(Exception ex) {
             incoming.remove(player.getUUID());
-            reply(player,packet,"오류: "+safeMessage(ex));
+            reply(player,packet,Messages.text("ai_block_bridge.error", safeMessage(ex)));
         }
     }
     private static void startRecording(ServerPlayer player,BridgePacket packet,ServerLevel level,Region region) {
-        if(recordings.containsKey(player.getUUID())) throw new IllegalArgumentException("이미 틱 변화를 기록하고 있습니다.");
+        if(recordings.containsKey(player.getUUID())) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.already_recording"));
         recordings.put(player.getUUID(),new Recording(packet.dimension(),new TickRecorder(level,region,!packet.text().equals("include-cooldown"))));
-        reply(player,packet,"틱 기록 시작. 회로를 작동한 뒤 기록 중지 키를 누르세요.");
+        reply(player,packet,Messages.text("ai_block_bridge.timeline.started"));
     }
     private static void stopRecording(ServerPlayer player,BridgePacket packet) {
         Recording recording=recordings.remove(player.getUUID());
-        if(recording==null) throw new IllegalArgumentException("진행 중인 틱 기록이 없습니다.");
+        if(recording==null) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.not_recording"));
         String result=recording.recorder.result();
         packet.chunks(result,BridgePacket.TIMELINE,p->ServerPlayNetworking.send(player,p));
     }
     private static String safeMessage(Exception ex) {
         String s=ex.getMessage()==null?ex.getClass().getSimpleName():ex.getMessage();
-        return s.substring(0,Math.min(s.length(),1000));
+        return Messages.isEncoded(s)?s:s.substring(0,Math.min(s.length(),1000));
     }
     private static void reply(ServerPlayer p,BridgePacket request,String text) {
         request.chunks(text,BridgePacket.RESULT,msg->ServerPlayNetworking.send(p,msg));
     }
     private static void validatePosition(ServerLevel level,BlockPos pos) {
         if(level.isOutsideBuildHeight(pos) || !level.getWorldBorder().isWithinBounds(pos))
-            throw new IllegalArgumentException("월드 높이 또는 월드 경계를 벗어났습니다.");
-        if(!level.hasChunkAt(pos)) throw new IllegalArgumentException("불러오지 않은 청크입니다. 영역 가까이 이동하세요.");
+            throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.world_bounds"));
+        if(!level.hasChunkAt(pos)) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.unloaded"));
     }
     static void validateRegion(ServerLevel level,Region r) {
         // Height and the rectangular world border need only the opposite corners;
@@ -103,7 +103,7 @@ public final class BridgeServer {
         for(int cx=r.x()>>4;cx<=(r.maxX()>>4);cx++)
             for(int cz=r.z()>>4;cz<=(r.maxZ()>>4);cz++)
                 if(!level.hasChunkAt(new BlockPos(Math.max(r.x(),cx<<4),r.y(),Math.max(r.z(),cz<<4))))
-                    throw new IllegalArgumentException("불러오지 않은 청크입니다. 영역 가까이 이동하세요.");
+                    throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.unloaded"));
     }
     static Cell snapshot(ServerLevel level,BlockPos pos) {
         BlockEntity be=level.getBlockEntity(pos);
@@ -123,7 +123,7 @@ public final class BridgeServer {
                 text.append(" | ").append(tag);
             }
             text.append('\n');
-            if(text.length()>Script.MAX_CHARS) throw new IllegalArgumentException("NBT를 포함한 스크립트가 너무 큽니다. 영역을 줄이세요.");
+            if(text.length()>Script.MAX_CHARS) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.export_large"));
         }
         return text.toString();
     }
@@ -134,21 +134,21 @@ public final class BridgeServer {
                 var reader=new com.mojang.brigadier.StringReader(e.state());
                 BlockState state=BlockStateParser.parseForBlock(level.registryAccess().lookupOrThrow(Registries.BLOCK),reader,false).blockState();
                 reader.skipWhitespace();
-                if(reader.canRead())throw new IllegalArgumentException("블록 상태 뒤에 잘못된 문자가 있습니다.");
+                if(reader.canRead())throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.trailing_state"));
                 BlockPos pos=new BlockPos(r.x()+e.x(),r.y()+e.y(),r.z()+e.z());
                 CompoundTag tag=null;
                 if(!e.nbt().isEmpty()) {
-                    if(!(state.getBlock() instanceof EntityBlock eb)) throw new IllegalArgumentException("이 블록은 블록 엔티티 NBT를 지원하지 않습니다.");
+                    if(!(state.getBlock() instanceof EntityBlock eb)) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.unsupported_nbt"));
                     BlockEntity prototype=eb.newBlockEntity(pos,state);
-                    if(prototype==null) throw new IllegalArgumentException("블록 엔티티 생성 실패");
+                    if(prototype==null) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.block_entity_create"));
                     tag=TagParser.parseCompoundFully(e.nbt());
                     CompoundTag metadata=prototype.saveWithFullMetadata(level.registryAccess());
                     tag.put("id",metadata.get("id"));
                     tag.putInt("x",pos.getX());tag.putInt("y",pos.getY());tag.putInt("z",pos.getZ());
-                    if(BlockEntity.loadStatic(pos,state,tag,level.registryAccess())==null) throw new IllegalArgumentException("NBT 로드 실패");
+                    if(BlockEntity.loadStatic(pos,state,tag,level.registryAccess())==null) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.nbt_load"));
                 }
                 cells.add(new Cell(pos,state,tag));
-            } catch(Exception ex) { throw new IllegalArgumentException(e.line()+"행: "+safeMessage(ex)); }
+            } catch(Exception ex) { throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.line", e.line(), safeMessage(ex))); }
         }
         return cells;
     }
@@ -167,18 +167,18 @@ public final class BridgeServer {
             catch(Exception rollback) {
                 undos.put(p.getUUID(),new Undo(packet.dimension(),before,null));
                 LoggerFactory.getLogger("ai_block_bridge").error("Rollback failed; retained recovery snapshot",rollback);
-                throw new IllegalStateException("복원 중 오류가 발생했습니다. 월드를 종료하지 말고 붙여넣기 취소를 누르세요.",ex);
+                throw new IllegalStateException(Messages.text("ai_block_bridge.error.rollback"),ex);
             }
-            throw new IllegalStateException("붙여넣기 실패. 원래 블록으로 복원했습니다: "+safeMessage(ex));
+            throw new IllegalStateException(Messages.text("ai_block_bridge.error.paste_restored", safeMessage(ex)));
         }
         undos.put(p.getUUID(),new Undo(packet.dimension(),before,after));
-        reply(p,packet,target.size()+"블록 붙여넣기 완료. 직전 작업을 취소할 수 있습니다.");
+        reply(p,packet,Messages.text("ai_block_bridge.pasted", target.size()));
     }
     private static void checkSnapshotSize(List<Cell> cells) {
         long count=0;
         for(Cell c:cells) {
             count+=c.nbt==null?0:c.nbt.toString().length();
-            if(count>Script.MAX_CHARS) throw new IllegalArgumentException("실행 취소용 NBT가 너무 큽니다. 영역을 줄이세요.");
+            if(count>Script.MAX_CHARS) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.undo_large"));
         }
     }
     static void apply(ServerLevel level,List<Cell> cells) {
@@ -188,10 +188,10 @@ public final class BridgeServer {
         for(Cell c:cells) {
             level.removeBlockEntity(c.pos);
             level.setBlock(c.pos,c.state,flags);
-            if(!level.getBlockState(c.pos).equals(c.state)) throw new IllegalStateException("블록 설치 실패: "+c.pos);
+            if(!level.getBlockState(c.pos).equals(c.state)) throw new IllegalStateException(Messages.text("ai_block_bridge.error.place", c.pos));
             if(c.state.getBlock() instanceof EntityBlock eb) {
                 BlockEntity be=c.nbt==null?eb.newBlockEntity(c.pos,c.state):BlockEntity.loadStatic(c.pos,c.state,c.nbt.copy(),level.registryAccess());
-                if(be==null) throw new IllegalStateException("블록 엔티티 복원 실패: "+c.pos);
+                if(be==null) throw new IllegalStateException(Messages.text("ai_block_bridge.error.block_entity_restore", c.pos));
                 level.setBlockEntity(be);level.blockEntityChanged(c.pos);
             }
             level.sendBlockUpdated(c.pos,c.state,c.state,Block.UPDATE_CLIENTS);
@@ -199,19 +199,19 @@ public final class BridgeServer {
     }
     private static void undo(ServerPlayer player,BridgePacket packet,ServerLevel level) {
         Undo undo=undos.get(player.getUUID());
-        if(undo==null) throw new IllegalArgumentException("취소할 붙여넣기가 없습니다.");
-        if(!undo.dimension.equals(packet.dimension())) throw new IllegalArgumentException("붙여넣기했던 차원으로 돌아가세요.");
+        if(undo==null) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.no_undo"));
+        if(!undo.dimension.equals(packet.dimension())) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.undo_dimension"));
         for(Cell c:undo.before) validatePosition(level,c.pos);
         if(undo.after!=null) for(Cell expected:undo.after) {
             if(!snapshot(level,expected.pos).equals(expected))
-                throw new IllegalArgumentException("붙여넣기 후 블록 또는 NBT가 변경되어 취소를 중단했습니다. 기존 변경을 덮어쓰지 않았습니다.");
+                throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.undo_changed"));
         }
         try { apply(level,undo.before); }
         catch(Exception ex) {
             undos.put(player.getUUID(),new Undo(undo.dimension,undo.before,null));
-            throw new IllegalStateException("취소 중 오류. 복원 기록은 유지되었습니다. 다시 시도하세요: "+safeMessage(ex));
+            throw new IllegalStateException(Messages.text("ai_block_bridge.error.undo_retry", safeMessage(ex)));
         }
         undos.remove(player.getUUID());
-        reply(player,packet,"붙여넣기 취소 완료: "+undo.before.size()+"블록 복원");
+        reply(player,packet,Messages.text("ai_block_bridge.undone", undo.before.size()));
     }
 }

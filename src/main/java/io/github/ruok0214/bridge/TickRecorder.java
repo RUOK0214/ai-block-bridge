@@ -41,7 +41,7 @@ final class TickRecorder {
         if(stopped)return;
         tick++;
         try { BridgeServer.validateRegion(level,region); }
-        catch(Exception ex) { finish("영역을 불러올 수 없어 기록을 종료했습니다.");return; }
+        catch(Exception ex) { finish("Recording stopped: region unavailable.");return; }
         StringBuilder changed=new StringBuilder();
         int count=0,index=0;
         for(BlockPos p:positions()) {
@@ -50,10 +50,10 @@ final class TickRecorder {
             CompoundTag oldNbt=previousStates[index].hasBlockEntity()?previousNbt.get(index):null;
             if(!state.equals(previousStates[index]) || !Objects.equals(nbt,oldNbt)) {
                 count++;
-                if(changes+count>MAX_CHANGES) { finish("변경 항목 100,000개 제한: 마지막 틱은 부분 기록하지 않았습니다.");return; }
+                if(changes+count>MAX_CHANGES) { finish("100,000-entry limit: the final tick was omitted rather than partially recorded.");return; }
                 append(changed,new BridgeServer.Cell(p,state,nbt));
                 if((long)text.length()+changed.length()>Script.MAX_TIMELINE_CHARS-288) {
-                    finish("기록 용량 20,000,000자 제한: 마지막 틱은 부분 기록하지 않았습니다.");return;
+                    finish("20,000,000-character limit: the final tick was omitted rather than partially recorded.");return;
                 }
                 previousStates[index]=state;
                 if(nbt==null)previousNbt.remove(index);else previousNbt.put(index,nbt);
@@ -62,12 +62,12 @@ final class TickRecorder {
         }
         if(count>0) {
             String section="\n@tick "+tick+'\n'+changed;
-            if(changes+count>MAX_CHANGES) { finish("변경 항목 100,000개 제한: 마지막 틱은 부분 기록하지 않았습니다.");return; }
-            if((long)text.length()+section.length()>Script.MAX_TIMELINE_CHARS-256) { finish("기록 용량 20,000,000자 제한에 도달했습니다.");return; }
+            if(changes+count>MAX_CHANGES) { finish("100,000-entry limit: the final tick was omitted rather than partially recorded.");return; }
+            if((long)text.length()+section.length()>Script.MAX_TIMELINE_CHARS-256) { finish("Reached the 20,000,000-character limit.");return; }
             text.append(section);changes+=count;
         }
-        if(changes>=MAX_CHANGES)finish("변경 항목 100,000개에 도달했습니다.");
-        else if(tick>=MAX_TICKS)finish("최대 기록 시간 6,000틱에 도달했습니다.");
+        if(changes>=MAX_CHANGES)finish("Reached the 100,000-entry limit.");
+        else if(tick>=MAX_TICKS)finish("Reached the 6,000-tick recording limit.");
     }
     private Iterable<BlockPos> positions() {
         return BlockPos.betweenClosed(region.x(),region.y(),region.z(),region.maxX(),region.maxY(),region.maxZ());

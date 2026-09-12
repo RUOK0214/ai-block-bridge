@@ -8,15 +8,15 @@ public record Region(int x, int y, int z, int maxX, int maxY, int maxZ) {
         return new Region(Math.min(ax,bx), Math.min(ay,by), Math.min(az,bz), Math.max(ax,bx), Math.max(ay,by), Math.max(az,bz));
     }
     public Region {
-        if (x > maxX || y > maxY || z > maxZ) throw new IllegalArgumentException("잘못된 영역입니다.");
+        if (x > maxX || y > maxY || z > maxZ) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.region"));
         long sx = (long)maxX-x+1, sy = (long)maxY-y+1, sz = (long)maxZ-z+1;
         if (sx > MAX_BLOCKS || sy > MAX_BLOCKS || sz > MAX_BLOCKS || sx*sy*sz > MAX_BLOCKS)
-            throw new IllegalArgumentException("영역은 최대 "+MAX_BLOCKS_TEXT+"블록입니다.");
+            throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.region_limit", MAX_BLOCKS_TEXT));
     }
     public int sizeX() { return maxX-x+1; }
     public int sizeY() { return maxY-y+1; }
     public int sizeZ() { return maxZ-z+1; }
     public int volume() { return sizeX()*sizeY()*sizeZ(); }
     public boolean containsLocal(int lx, int ly, int lz) { return lx>=0 && ly>=0 && lz>=0 && lx<sizeX() && ly<sizeY() && lz<sizeZ(); }
-    public String description() { return "원점: " + x+", "+y+", "+z+" / 크기: "+sizeX()+" × "+sizeY()+" × "+sizeZ()+" ("+volume()+"블록)"; }
+    public String description() { return Messages.text("ai_block_bridge.region", x, y, z, sizeX(), sizeY(), sizeZ(), volume()); }
 }
