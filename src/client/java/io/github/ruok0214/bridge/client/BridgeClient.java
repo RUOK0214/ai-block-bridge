@@ -69,7 +69,7 @@ public final class BridgeClient implements ClientModInitializer {
                 if(packet.index()==0&&packet.total()==1) {
                     recordingStopped(packet.text());
                     if(ctx.client().player!=null)ctx.client().player.sendSystemMessage(Messages.component(timelineStatus));
-                    ctx.client().gui.setOverlayMessage(Messages.component(timelineStatus),false);
+                    if(ctx.client().player!=null)ctx.client().player.displayClientMessage(Messages.component(timelineStatus),true);
                 }
                 return;
             }
