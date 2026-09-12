@@ -41,14 +41,16 @@ public final class BridgeScreen extends Screen {
                 coordinates[r*3].setValue(""+p.getX());coordinates[r*3+1].setValue(""+p.getY());coordinates[r*3+2].setValue(""+p.getZ());
             });
         }
-        button(Messages.text("ai_block_bridge.button.apply"),8,78,80,this::applyCoordinates);
-        button(Messages.text("ai_block_bridge.button.validate"),92,78,80,()->{
+        int toolbarWidth=(width-36)/6;
+        button(Messages.text("ai_block_bridge.button.apply"),8,78,toolbarWidth,this::applyCoordinates);
+        button(Messages.text("ai_block_bridge.button.validate"),12+toolbarWidth,78,toolbarWidth,()->{
             try { BridgeClient.status=Messages.text("ai_block_bridge.validated", Script.parse(BridgeClient.script,BridgeClient.region()).size()); }
             catch(Exception ex){BridgeClient.status=ex.getMessage();}
         });
-        button(Messages.text("ai_block_bridge.button.help"),176,78,64,()->confirm(Messages.text("ai_block_bridge.help.title"), Messages.text("ai_block_bridge.help.body", Region.MAX_BLOCKS_TEXT),()->{}));
-        button(Messages.text("ai_block_bridge.button.timeline"),244,78,70,()->minecraft.gui.setScreen(new TimelineScreen()));
-        button(Messages.text("ai_block_bridge.button.close"),width-66,78,58,this::onClose);
+        button(Messages.text("ai_block_bridge.button.help"),16+toolbarWidth*2,78,toolbarWidth,()->confirm(Messages.text("ai_block_bridge.help.title"), Messages.text("ai_block_bridge.help.body", Region.MAX_BLOCKS_TEXT),()->{}));
+        button(Messages.text("ai_block_bridge.button.timeline"),20+toolbarWidth*3,78,toolbarWidth,()->minecraft.gui.setScreen(new TimelineScreen()));
+        button(Messages.text("ai_block_bridge.prompt.open"),24+toolbarWidth*4,78,toolbarWidth,()->minecraft.gui.setScreen(new AiPromptScreen(this)));
+        button(Messages.text("ai_block_bridge.button.close"),28+toolbarWidth*5,78,toolbarWidth,this::onClose);
         editor=MultiLineEditBox.builder().setX(8).setY(116).setShowDecorations(true)
             .build(font,width-16,Math.max(30,height-203),Messages.component(Messages.text("ai_block_bridge.editor.script")));
         editor.setCharacterLimit(Script.MAX_CHARS);

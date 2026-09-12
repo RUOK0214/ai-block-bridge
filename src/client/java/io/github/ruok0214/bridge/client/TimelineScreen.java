@@ -24,7 +24,8 @@ public final class TimelineScreen extends Screen {
         }));
         stop=button(Messages.text("ai_block_bridge.button.record_stop"),12+w,28,w,()->BridgeClient.send(BridgePacket.STOP_RECORD));
         button(Messages.text("ai_block_bridge.button.script"),16+w*2,28,w,()->minecraft.gui.setScreen(new BridgeScreen()));
-        button(Messages.text("ai_block_bridge.button.close"),20+w*3,28,w,this::onClose);
+        button(Messages.text("ai_block_bridge.prompt.open"),20+w*3,28,w,()->minecraft.gui.setScreen(new AiPromptScreen(this)));
+        button(Messages.text("ai_block_bridge.button.close"),width-66,4,58,this::onClose);
         filter=button(filterLabel(),8,72,width-16,()->{
             BridgeClient.ignoreHopperCooldown=!BridgeClient.ignoreHopperCooldown;
             filter.setMessage(Messages.component(filterLabel()));
@@ -56,7 +57,8 @@ public final class TimelineScreen extends Screen {
     }catch(Exception ex){BridgeClient.timelineStatus=Messages.text("ai_block_bridge.save_failed", ex.getMessage());}}
     @Override public void tick(){
         filter.active=!BridgeClient.busy()&&!BridgeClient.recording;
-        boolean idle=!BridgeClient.busy();start.active=idle&&!BridgeClient.recording;stop.active=idle&&BridgeClient.recording;
+        boolean idle=!BridgeClient.busy();start.active=idle&&!BridgeClient.recording&&!BridgeClient.recordingAvailable;stop.active=idle&&(BridgeClient.recording||BridgeClient.recordingAvailable);
+        stop.setMessage(Messages.component(Messages.text(BridgeClient.recordingAvailable?"ai_block_bridge.recording.retrieve":"ai_block_bridge.button.record_stop")));
         boolean editable=idle&&!BridgeClient.recording;editor.active=editable;load.active=editable;save.active=idle;copy.active=idle;undo.active=editable;
     }
     private String filterLabel(){return Messages.text("ai_block_bridge.filter", Messages.text(BridgeClient.ignoreHopperCooldown?"ai_block_bridge.on":"ai_block_bridge.off"));}
