@@ -140,5 +140,6 @@
   "ai_block_bridge.recording.stop.entries": "Reached the %s-entry limit.",
   "ai_block_bridge.recording.stop.entries_partial": "Reached the %s-entry limit. The entire final tick was omitted.",
   "ai_block_bridge.recording.stop.size_partial": "Reached the %s-character limit. The entire final tick was omitted.",
-  "ai_block_bridge.recording.stop.unavailable": "Stopped because the region is no longer loaded."
+  "ai_block_bridge.recording.stop.unavailable": "Stopped because the region is no longer loaded.",
+  "ai_block_bridge.recording.banner": "Recording stopped · See chat for the reason."
 }

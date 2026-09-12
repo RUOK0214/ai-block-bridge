@@ -140,5 +140,6 @@
   "ai_block_bridge.recording.stop.entries": "변경 항목 %s개 제한에 도달했습니다.",
   "ai_block_bridge.recording.stop.entries_partial": "변경 항목 %s개 제한입니다. 마지막 틱 전체를 제외했습니다.",
   "ai_block_bridge.recording.stop.size_partial": "기록 용량 %s자 제한입니다. 마지막 틱 전체를 제외했습니다.",
-  "ai_block_bridge.recording.stop.unavailable": "영역을 불러올 수 없어 기록을 중지했습니다."
+  "ai_block_bridge.recording.stop.unavailable": "영역을 불러올 수 없어 기록을 중지했습니다.",
+  "ai_block_bridge.recording.banner": "기록 자동 중지 · 자세한 사유는 채팅에서 확인하세요."
 }
