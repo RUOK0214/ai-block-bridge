@@ -35,14 +35,3 @@ fabricApi {
         enableClientGameTests = true
     }
 }
-
-// Temporary API inspection for the 26.2 notification adapter.
-tasks.named('compileClientJava') {
-    doFirst {
-        ['net.minecraft.client.gui.Gui', 'net.minecraft.client.player.LocalPlayer'].each { apiClass ->
-            println providers.exec {
-                commandLine 'javap', '-classpath', sourceSets.client.compileClasspath.asPath, apiClass
-            }.standardOutput.asText.get()
-        }
-    }
-}
