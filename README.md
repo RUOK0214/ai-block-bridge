@@ -2,12 +2,12 @@
 
 Minecraft **Java 26.2 / Fabric** — 제작자 **RUOK0214**.
 AI와 블록 배치 데이터를 텍스트로 주고받기 위한 모드입니다. AI API나 인터넷 연결은 사용하지 않습니다.
-현재 버전: **0.1.14**. 중요한 월드의 복사본에서 먼저 테스트하세요.
+현재 버전: **0.1.15**. 중요한 월드의 복사본에서 먼저 테스트하세요.
 
 ## 설치
 
 1. Fabric Loader **0.19.5 이상**, Minecraft **26.2**를 사용합니다.
-2. `ai-block-bridge-0.1.14.jar`와 Fabric API **0.160.0+26.2 이상(26.2용)**을 `mods` 폴더에 넣습니다. 기존 버전 JAR는 제거합니다.
+2. `ai-block-bridge-0.1.15.jar`와 Fabric API **0.160.0+26.2 이상(26.2용)**을 `mods` 폴더에 넣습니다. 기존 버전 JAR는 제거합니다.
 3. 싱글플레이는 **치트 허용**이 필요합니다. 멀티플레이는 서버·클라이언트 양쪽에 설치하고 **OP 레벨 4**가 필요합니다.
 4. Java 개발·실행 기준은 **Java 25**입니다.
 
@@ -181,3 +181,7 @@ Timelines include existing entities at tick zero and then `enter`, `update`, and
 Entity comments are analysis data, not entity spawning/replay instructions; block paste/undo behavior is unchanged.
 
 기록 메뉴의 `기록세트 저장 | 기록세트 폴더 열기`에서 최근 저장한 세트의 폴더를 바로 열 수 있습니다. 재실행 후에도 경로를 기억하며, 저장 이력이 없거나 폴더가 사라졌으면 기본 `ai-block-bridge` 폴더를 엽니다.
+
+## 0.1.15 — 메뉴 정리
+
+상단의 `구조 | 타임라인 | AI 요청문 | 도움말`로 화면을 이동합니다. 두 화면의 `영역 설정`에서 좌표를 변경하고 적용합니다. 구조 화면의 영역 캡처·엔티티 옵션과 월드 붙여넣기를 구분하고, 타임라인 화면에는 기록 시작·중지·엔티티·호퍼 옵션을 모았습니다. 파일 작업은 두 화면 모두 아래쪽 같은 위치에 있습니다. `기록세트 저장 | 기록세트 폴더 열기`는 그대로 유지합니다.
