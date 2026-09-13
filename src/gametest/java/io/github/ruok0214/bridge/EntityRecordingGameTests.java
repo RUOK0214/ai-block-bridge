@@ -17,6 +17,23 @@ public class EntityRecordingGameTests {
         h.getLevel().addFreshEntity(entity);return entity;
     }
     @GameTest(structure="ai_block_bridge_test:large_empty")
+    public void motionFilterKeepsPositionCountAndLeave(GameTestHelper h) {
+        var p=h.absolutePos(new BlockPos(2,2,2));var r=region(p);var level=h.getLevel();
+        var entity=item(h,p);String id=entity.getUUID().toString();
+        var full=new TickRecorder(level,r,new CaptureOptions(false,true,true,false));
+        var filtered=new TickRecorder(level,r,new CaptureOptions(false,true,true,true));
+        entity.setDeltaMovement(0.1,0.0,0.0);full.capture(level);filtered.capture(level);
+        h.assertTrue(full.result().contains("# @entity update "+id),"Full mode lost velocity update");
+        h.assertTrue(!filtered.result().contains("@tick 1\n"),"Filter kept velocity-only update");
+        entity.setPos(p.getX()+1.25,p.getY()+0.5,p.getZ()+0.75);filtered.capture(level);
+        h.assertTrue(filtered.result().contains("@tick 2\n# @entity update "+id)&&filtered.result().contains("Motion:[0.1d,0.0d,0.0d]"),"Filter lost position or full current NBT");
+        entity.setItem(new ItemStack(Items.DIAMOND,7));filtered.capture(level);
+        h.assertTrue(filtered.result().contains("@tick 3\n# @entity update "+id),"Filter lost item count update");
+        entity.discard();filtered.capture(level);
+        h.assertTrue(filtered.result().contains("@tick 4\n# @entity leave "+id),"Filter lost leave");
+        h.succeed();
+    }
+    @GameTest(structure="ai_block_bridge_test:large_empty")
     public void independentOptionsAndEntityComments(GameTestHelper h) {
         var p=h.absolutePos(new BlockPos(2,2,2));var r=region(p);var level=h.getLevel();
         level.setBlock(p,Blocks.STONE.defaultBlockState(),Block.UPDATE_ALL);

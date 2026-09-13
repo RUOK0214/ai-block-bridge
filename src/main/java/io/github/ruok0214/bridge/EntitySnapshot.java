@@ -11,7 +11,10 @@ import net.minecraft.world.phys.AABB;
 /** Observation only: never creates, moves, loads, or deletes a world entity. */
 final class EntitySnapshot {
     static final int MAX_ENTITIES=4096;
-    record State(String type,double x,double y,double z,String nbt) {
+    record State(String type,double x,double y,double z,String nbt,String comparisonNbt) {
+        boolean sameRecordedState(State other){
+            return other!=null&&type.equals(other.type)&&Double.compare(x,other.x)==0&&Double.compare(y,other.y)==0&&Double.compare(z,other.z)==0&&comparisonNbt.equals(other.comparisonNbt);
+        }
         String line(String event,UUID id) {
             return "# @entity "+event+" "+id+" | "+x+" "+y+" "+z+" | "+type+" | "+nbt+'\n';
         }
@@ -23,6 +26,9 @@ final class EntitySnapshot {
             +"# Players excluded. Membership uses entity position in [min,max+1). leave does not imply death.\n";
     }
     static Map<UUID,State> capture(ServerLevel level,Region r,int maxChars) {
+        return capture(level,r,maxChars,false);
+    }
+    static Map<UUID,State> capture(ServerLevel level,Region r,int maxChars,boolean ignoreAgeMotion) {
         var entities=level.getEntities((net.minecraft.world.entity.Entity)null,new AABB(r.x(),r.y(),r.z(),(double)r.maxX()+1,(double)r.maxY()+1,(double)r.maxZ()+1),
             e->!(e instanceof Player)&&!e.isRemoved()
                 &&e.getX()>=r.x()&&e.getX()<(double)r.maxX()+1
@@ -34,11 +40,14 @@ final class EntitySnapshot {
         for(var entity:entities) {
             var output=TagValueOutput.createWithContext(ProblemReporter.DISCARDING,level.registryAccess());
             entity.saveWithoutId(output);
-            String nbt=output.buildResult().toString();
+            var tag=output.buildResult();
+            String nbt=tag.toString();
+            if(ignoreAgeMotion){tag=tag.copy();tag.remove("Age");tag.remove("Motion");}
+            String comparisonNbt=ignoreAgeMotion?tag.toString():nbt;
             length+=nbt.length()+256L;
             if(length>maxChars)throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.export_large"));
             result.put(entity.getUUID(),new State(BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString(),
-                entity.getX()-r.x(),entity.getY()-r.y(),entity.getZ()-r.z(),nbt));
+                entity.getX()-r.x(),entity.getY()-r.y(),entity.getZ()-r.z(),nbt,comparisonNbt));
         }
         return result;
     }

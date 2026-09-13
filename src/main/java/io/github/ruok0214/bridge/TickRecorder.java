@@ -12,6 +12,7 @@ final class TickRecorder {
     static final int MAX_TICKS=6000, MAX_CHANGES=500_000;
     private final boolean ignoreHopperCooldown;
     private final boolean includeEntities;
+    private final boolean ignoreEntityAgeMotion;
     private Map<UUID,EntitySnapshot.State> previousEntities=Map.of();
     private final Region region;
     private final String initialStructure;
@@ -42,6 +43,7 @@ final class TickRecorder {
         this.maxTicks=maxTicks;this.maxChanges=maxChanges;this.maxChars=maxChars;
         this.ignoreHopperCooldown=options.ignoreHopperCooldown();
         this.includeEntities=options.timelineEntities();
+        this.ignoreEntityAgeMotion=options.ignoreEntityAgeMotion();
         this.region=region;
         // Both snapshots run on the server thread before another tick can advance.
         this.initialStructure=BridgeServer.exportRegion(level,region,options.structureEntities());
@@ -59,8 +61,10 @@ final class TickRecorder {
             "\n# Only changes after recording started. @tick is a server-tick offset.\n# ignore hopper TransferCooldown: "+ignoreHopperCooldown+"\n");
         if(includeEntities) {
             text.append("# include entities: true\n").append(EntitySnapshot.header());
+            text.append("# ignore entity Age/Motion-only updates: ").append(ignoreEntityAgeMotion).append("\n");
+            if(ignoreEntityAgeMotion)text.append("# Age and Motion alone do not trigger updates. Emitted events retain full current SNBT.\n");
             if(text.length()>maxChars-288)throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.export_large"));
-            previousEntities=EntitySnapshot.capture(level,region,maxChars);
+            previousEntities=EntitySnapshot.capture(level,region,maxChars,ignoreEntityAgeMotion);
             if(previousEntities.size()>maxChanges)throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.entity_limit",maxChanges));
             if(!previousEntities.isEmpty())text.append("\n@tick 0\n");
             for(var entry:previousEntities.entrySet()) {
@@ -96,12 +100,12 @@ final class TickRecorder {
         }
         Map<UUID,EntitySnapshot.State> currentEntities=previousEntities;
         if(includeEntities) {
-            try { currentEntities=EntitySnapshot.capture(level,region,maxChars); }
+            try { currentEntities=EntitySnapshot.capture(level,region,maxChars,ignoreEntityAgeMotion); }
             catch(RuntimeException ex) { finish("Entity snapshot failed or exceeded limits; the final tick was omitted.","entities");return; }
             var ids=new TreeSet<UUID>(previousEntities.keySet());ids.addAll(currentEntities.keySet());
             for(UUID id:ids) {
                 var before=previousEntities.get(id);var after=currentEntities.get(id);
-                if(Objects.equals(before,after))continue;
+                if(before!=null&&before.sameRecordedState(after))continue;
                 String event=after==null?"leave":before==null?"enter":"update";
                 count++;
                 if(changes+count>maxChanges) { finish("Entry limit: the final tick was omitted rather than partially recorded.","entries_partial",maxChanges);return; }

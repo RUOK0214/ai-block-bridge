@@ -164,5 +164,9 @@
   "ai_block_bridge.menu.timeline_editor": "Timeline · max 6,000 ticks / 500,000 entries / 20M chars",
   "ai_block_bridge.menu.title": "AI BLOCK BRIDGE · 26.2",
   "ai_block_bridge.menu.cooldown": "Skip cooldown: %s",
-  "ai_block_bridge.menu.cooldown_hint": "Ignore hopper TransferCooldown changes. Other block and inventory changes are still recorded."
+  "ai_block_bridge.menu.cooldown_hint": "Ignore hopper TransferCooldown changes. Other block and inventory changes are still recorded.",
+  "ai_block_bridge.record_options.title": "Recording options",
+  "ai_block_bridge.record_options.noise": "Skip Age/Motion-only updates: %s",
+  "ai_block_bridge.record_options.noise_hint": "On by default. Skip updates caused only by top-level Age and Motion. Position, count, other NBT changes and enter/leave remain recorded with full current NBT. Turn off to inspect velocity-only changes or lifetime every tick.",
+  "ai_block_bridge.record_options.hint": "Hover for details. Changes apply to the next recording."
 }

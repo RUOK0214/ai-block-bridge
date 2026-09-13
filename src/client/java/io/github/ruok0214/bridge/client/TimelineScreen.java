@@ -11,7 +11,7 @@ import org.lwjgl.glfw.GLFW;
 /** Editor for recorded tick order. It is intentionally separate from the placement script. */
 public final class TimelineScreen extends Screen {
     private MultiLineEditBox editor;
-    private Button start,stop,load,save,copy,undo,filter,bundle,entities,area;
+    private Button start,stop,load,save,copy,undo,bundle,options,area;
     private boolean syncing;
     public TimelineScreen(){super(Messages.component(Messages.text("ai_block_bridge.timeline.title")));}
     private Button button(String title,int x,int y,int w,Runnable action) {
@@ -29,16 +29,7 @@ public final class TimelineScreen extends Screen {
             BridgeClient.send(BridgePacket.START_RECORD);if(BridgeClient.busy())minecraft.gui.setScreen(null);
         }));
         stop=button(Messages.text("ai_block_bridge.button.record_stop"),12+w,72,w,()->BridgeClient.send(BridgePacket.STOP_RECORD));
-        entities=button(entityLabel(),16+w*2,72,w,()->{
-            BridgeClient.includeTimelineEntities=!BridgeClient.includeTimelineEntities;
-            entities.setMessage(Messages.component(entityLabel()));
-        });
-        entities.setTooltip(Tooltip.create(Messages.component(Messages.text("ai_block_bridge.entities.timeline_hint"))));
-        filter=button(filterLabel(),20+w*3,72,w,()->{
-            BridgeClient.ignoreHopperCooldown=!BridgeClient.ignoreHopperCooldown;
-            filter.setMessage(Messages.component(filterLabel()));
-        });
-        filter.setTooltip(Tooltip.create(Messages.component(Messages.text("ai_block_bridge.menu.cooldown_hint"))));
+        options=button(Messages.text("ai_block_bridge.record_options.title"),16+w*2,72,width-24-w*2,()->minecraft.gui.setScreen(new RecordingOptionsScreen(this)));
         editor=MultiLineEditBox.builder().setX(8).setY(104).setShowDecorations(false)
             .build(font,width-16,Math.max(12,height-182),Messages.component(Messages.text("ai_block_bridge.editor.timeline")));
         editor.setCharacterLimit(Script.MAX_TIMELINE_CHARS);editor.setValue(BridgeClient.timeline);
@@ -80,8 +71,7 @@ public final class TimelineScreen extends Screen {
     @Override public void tick(){
         area.active=!BridgeClient.busy()&&!BridgeClient.recording&&!BridgeClient.recordingAvailable;
         bundle.active=!BridgeClient.busy()&&!BridgeClient.recording&&BridgeClient.recordingBundle!=null;
-        entities.active=!BridgeClient.busy()&&!BridgeClient.recording&&!BridgeClient.recordingAvailable;
-        filter.active=!BridgeClient.busy()&&!BridgeClient.recording;
+        options.active=!BridgeClient.busy()&&!BridgeClient.recording&&!BridgeClient.recordingAvailable;
         boolean idle=!BridgeClient.busy();start.active=idle&&!BridgeClient.recording&&!BridgeClient.recordingAvailable;stop.active=idle&&(BridgeClient.recording||BridgeClient.recordingAvailable);
         stop.setMessage(Messages.component(Messages.text(BridgeClient.recordingAvailable?"ai_block_bridge.recording.retrieve":"ai_block_bridge.button.record_stop")));
         boolean editable=idle&&!BridgeClient.recording;editor.active=editable;load.active=editable;save.active=idle;copy.active=idle;undo.active=editable;

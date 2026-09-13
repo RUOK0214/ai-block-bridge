@@ -164,5 +164,9 @@
   "ai_block_bridge.menu.timeline_editor": "타임라인 · 최대 6,000틱 / 50만 항목 / 2천만 자",
   "ai_block_bridge.menu.title": "AI BLOCK BRIDGE · 26.2",
   "ai_block_bridge.menu.cooldown": "쿨다운 제외: %s",
-  "ai_block_bridge.menu.cooldown_hint": "호퍼의 TransferCooldown 변화만 제외합니다. 다른 블록 상태와 아이템 변화는 기록합니다."
+  "ai_block_bridge.menu.cooldown_hint": "호퍼의 TransferCooldown 변화만 제외합니다. 다른 블록 상태와 아이템 변화는 기록합니다.",
+  "ai_block_bridge.record_options.title": "기록 옵션",
+  "ai_block_bridge.record_options.noise": "Age·Motion만 바뀐 업데이트 제외: %s",
+  "ai_block_bridge.record_options.noise_hint": "기본 켜짐. 엔티티의 Age와 Motion만 바뀌면 업데이트를 생략합니다. 위치·수량·다른 NBT 변화와 진입·이탈은 기록하며, 저장하는 이벤트에는 전체 NBT를 유지합니다. 속도만 바뀐 순간이나 매 틱의 수명이 필요하면 끄세요.",
+  "ai_block_bridge.record_options.hint": "마우스를 올리면 설명을 볼 수 있습니다. 다음 기록부터 적용됩니다."
 }
