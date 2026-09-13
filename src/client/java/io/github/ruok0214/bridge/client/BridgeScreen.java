@@ -51,13 +51,13 @@ public final class BridgeScreen extends Screen {
         button(Messages.text("ai_block_bridge.button.timeline"),20+toolbarWidth*3,78,toolbarWidth,()->minecraft.gui.setScreen(new TimelineScreen()));
         button(Messages.text("ai_block_bridge.prompt.open"),24+toolbarWidth*4,78,toolbarWidth,()->minecraft.gui.setScreen(new AiPromptScreen(this)));
         button(Messages.text("ai_block_bridge.button.close"),28+toolbarWidth*5,78,toolbarWidth,this::onClose);
-        entities=button(entityLabel(),8,116,width-16,()->{
+        entities=button(entityLabel(),width-158,4,150,()->{
             BridgeClient.includeStructureEntities=!BridgeClient.includeStructureEntities;
             entities.setMessage(Messages.component(entityLabel()));
         });
         entities.setTooltip(Tooltip.create(Messages.component(Messages.text("ai_block_bridge.entities.structure_hint"))));
-        editor=MultiLineEditBox.builder().setX(8).setY(140).setShowDecorations(true)
-            .build(font,width-16,Math.max(30,height-227),Messages.component(Messages.text("ai_block_bridge.editor.script")));
+        editor=MultiLineEditBox.builder().setX(8).setY(116).setShowDecorations(true)
+            .build(font,width-16,Math.max(30,height-203),Messages.component(Messages.text("ai_block_bridge.editor.script")));
         editor.setCharacterLimit(Script.MAX_CHARS);
         editor.setValue(BridgeClient.script);
         editor.setValueListener(value->{if(!syncing)BridgeClient.replace(value);});

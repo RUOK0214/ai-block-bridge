@@ -30,13 +30,13 @@ public final class TimelineScreen extends Screen {
             BridgeClient.ignoreHopperCooldown=!BridgeClient.ignoreHopperCooldown;
             filter.setMessage(Messages.component(filterLabel()));
         });
-        entities=button(entityLabel(),8,96,width-16,()->{
+        entities=button(entityLabel(),width-158,50,150,()->{
             BridgeClient.includeTimelineEntities=!BridgeClient.includeTimelineEntities;
             entities.setMessage(Messages.component(entityLabel()));
         });
         entities.setTooltip(Tooltip.create(Messages.component(Messages.text("ai_block_bridge.entities.timeline_hint"))));
-        editor=MultiLineEditBox.builder().setX(8).setY(122).setShowDecorations(true)
-            .build(font,width-16,Math.max(40,height-221),Messages.component(Messages.text("ai_block_bridge.editor.timeline")));
+        editor=MultiLineEditBox.builder().setX(8).setY(98).setShowDecorations(true)
+            .build(font,width-16,Math.max(40,height-197),Messages.component(Messages.text("ai_block_bridge.editor.timeline")));
         editor.setCharacterLimit(Script.MAX_TIMELINE_CHARS);editor.setValue(BridgeClient.timeline);
         editor.setValueListener(value->{if(!syncing)BridgeClient.replaceTimeline(value);});addRenderableWidget(editor);
         bundle=button(Messages.text("ai_block_bridge.bundle.save"),8,height-91,width-16,this::exportBundle);
@@ -87,7 +87,7 @@ public final class TimelineScreen extends Screen {
         super.extractRenderState(g,mx,my,delta);
         g.text(font,Messages.component(Messages.text("ai_block_bridge.timeline.heading")),8,8,0xFFFFFFFF,true);
         String region;try{region=BridgeClient.region().description();}catch(Exception ex){region=ex.getMessage();}
-        g.text(font,font.plainSubstrByWidth((BridgeClient.recording?Messages.display(Messages.text("ai_block_bridge.timeline.recording")):"")+Messages.display(region),width-16),8,56,BridgeClient.recording?0xFFFF7777:0xFFCCCCCC,false);
+        g.text(font,font.plainSubstrByWidth((BridgeClient.recording?Messages.display(Messages.text("ai_block_bridge.timeline.recording")):"")+Messages.display(region),width-178),8,56,BridgeClient.recording?0xFFFF7777:0xFFCCCCCC,false);
         g.text(font,font.plainSubstrByWidth(Messages.display(BridgeClient.timelineStatus),width-16),8,height-39,0xFFFFDF8D,false);
         g.text(font,Messages.component(Messages.text("ai_block_bridge.timeline.hint")),8,height-15,0xFFAAAAAA,false);
     }
