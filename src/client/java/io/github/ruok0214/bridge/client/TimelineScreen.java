@@ -11,7 +11,7 @@ import org.lwjgl.glfw.GLFW;
 /** Editor for recorded tick order. It is intentionally separate from the placement script. */
 public final class TimelineScreen extends Screen {
     private MultiLineEditBox editor;
-    private Button start,stop,load,save,copy,undo,filter,bundle;
+    private Button start,stop,load,save,copy,undo,filter,bundle,entities;
     private boolean syncing;
     public TimelineScreen(){super(Messages.component(Messages.text("ai_block_bridge.timeline.title")));}
     private Button button(String title,int x,int y,int w,Runnable action) {
@@ -30,8 +30,13 @@ public final class TimelineScreen extends Screen {
             BridgeClient.ignoreHopperCooldown=!BridgeClient.ignoreHopperCooldown;
             filter.setMessage(Messages.component(filterLabel()));
         });
-        editor=MultiLineEditBox.builder().setX(8).setY(98).setShowDecorations(true)
-            .build(font,width-16,Math.max(40,height-197),Messages.component(Messages.text("ai_block_bridge.editor.timeline")));
+        entities=button(entityLabel(),8,96,width-16,()->{
+            BridgeClient.includeTimelineEntities=!BridgeClient.includeTimelineEntities;
+            entities.setMessage(Messages.component(entityLabel()));
+        });
+        entities.setTooltip(Tooltip.create(Messages.component(Messages.text("ai_block_bridge.entities.timeline_hint"))));
+        editor=MultiLineEditBox.builder().setX(8).setY(122).setShowDecorations(true)
+            .build(font,width-16,Math.max(40,height-221),Messages.component(Messages.text("ai_block_bridge.editor.timeline")));
         editor.setCharacterLimit(Script.MAX_TIMELINE_CHARS);editor.setValue(BridgeClient.timeline);
         editor.setValueListener(value->{if(!syncing)BridgeClient.replaceTimeline(value);});addRenderableWidget(editor);
         bundle=button(Messages.text("ai_block_bridge.bundle.save"),8,height-91,width-16,this::exportBundle);
@@ -65,11 +70,13 @@ public final class TimelineScreen extends Screen {
     }catch(Exception ex){BridgeClient.timelineStatus=Messages.text("ai_block_bridge.save_failed", ex.getMessage());}}
     @Override public void tick(){
         bundle.active=!BridgeClient.busy()&&!BridgeClient.recording&&BridgeClient.recordingBundle!=null;
+        entities.active=!BridgeClient.busy()&&!BridgeClient.recording&&!BridgeClient.recordingAvailable;
         filter.active=!BridgeClient.busy()&&!BridgeClient.recording;
         boolean idle=!BridgeClient.busy();start.active=idle&&!BridgeClient.recording&&!BridgeClient.recordingAvailable;stop.active=idle&&(BridgeClient.recording||BridgeClient.recordingAvailable);
         stop.setMessage(Messages.component(Messages.text(BridgeClient.recordingAvailable?"ai_block_bridge.recording.retrieve":"ai_block_bridge.button.record_stop")));
         boolean editable=idle&&!BridgeClient.recording;editor.active=editable;load.active=editable;save.active=idle;copy.active=idle;undo.active=editable;
     }
+    private String entityLabel(){return Messages.text("ai_block_bridge.entities.timeline",Messages.text(BridgeClient.includeTimelineEntities?"ai_block_bridge.on":"ai_block_bridge.off"));}
     private String filterLabel(){return Messages.text("ai_block_bridge.filter", Messages.text(BridgeClient.ignoreHopperCooldown?"ai_block_bridge.on":"ai_block_bridge.off"));}
     @Override public boolean keyPressed(KeyEvent event){
         if(editor.isFocused()&&(event.modifiers()&(GLFW.GLFW_MOD_CONTROL|GLFW.GLFW_MOD_SUPER))!=0&&event.key()==GLFW.GLFW_KEY_Z){undoText();return true;}

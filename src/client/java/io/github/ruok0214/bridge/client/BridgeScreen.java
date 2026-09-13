@@ -16,7 +16,7 @@ public final class BridgeScreen extends Screen {
     private final EditBox[] coordinates=new EditBox[6];
     private final List<Button> actions=new ArrayList<>();
     private MultiLineEditBox editor;
-    private Button exportUndoButton;
+    private Button exportUndoButton,entities;
     private boolean syncing;
     public BridgeScreen() { super(Messages.component("AI Block Bridge")); }
     private Button button(String title,int x,int y,int w,Runnable action) {
@@ -51,8 +51,13 @@ public final class BridgeScreen extends Screen {
         button(Messages.text("ai_block_bridge.button.timeline"),20+toolbarWidth*3,78,toolbarWidth,()->minecraft.gui.setScreen(new TimelineScreen()));
         button(Messages.text("ai_block_bridge.prompt.open"),24+toolbarWidth*4,78,toolbarWidth,()->minecraft.gui.setScreen(new AiPromptScreen(this)));
         button(Messages.text("ai_block_bridge.button.close"),28+toolbarWidth*5,78,toolbarWidth,this::onClose);
-        editor=MultiLineEditBox.builder().setX(8).setY(116).setShowDecorations(true)
-            .build(font,width-16,Math.max(30,height-203),Messages.component(Messages.text("ai_block_bridge.editor.script")));
+        entities=button(entityLabel(),8,116,width-16,()->{
+            BridgeClient.includeStructureEntities=!BridgeClient.includeStructureEntities;
+            entities.setMessage(Messages.component(entityLabel()));
+        });
+        entities.setTooltip(Tooltip.create(Messages.component(Messages.text("ai_block_bridge.entities.structure_hint"))));
+        editor=MultiLineEditBox.builder().setX(8).setY(140).setShowDecorations(true)
+            .build(font,width-16,Math.max(30,height-227),Messages.component(Messages.text("ai_block_bridge.editor.script")));
         editor.setCharacterLimit(Script.MAX_CHARS);
         editor.setValue(BridgeClient.script);
         editor.setValueListener(value->{if(!syncing)BridgeClient.replace(value);});
@@ -83,6 +88,7 @@ public final class BridgeScreen extends Screen {
         });
         button(Messages.text("ai_block_bridge.button.undo_paste"),20+w*3,bottom+24,w,()->confirm(Messages.text("ai_block_bridge.confirm.undo_title"), Messages.text("ai_block_bridge.confirm.undo"),()->BridgeClient.send(BridgePacket.UNDO)));
     }
+    private String entityLabel(){return Messages.text("ai_block_bridge.entities.structure",Messages.text(BridgeClient.includeStructureEntities?"ai_block_bridge.on":"ai_block_bridge.off"));}
     private boolean applyCoordinates() {
         try {
             int[] v=new int[6];for(int i=0;i<6;i++)v[i]=Integer.parseInt(coordinates[i].getValue());

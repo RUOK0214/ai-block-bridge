@@ -2,12 +2,12 @@
 
 Minecraft **Java 26.2 / Fabric** — 제작자 **RUOK0214**.
 AI와 블록 배치 데이터를 텍스트로 주고받기 위한 모드입니다. AI API나 인터넷 연결은 사용하지 않습니다.
-현재 버전: **0.1.11**. 중요한 월드의 복사본에서 먼저 테스트하세요.
+현재 버전: **0.1.12**. 중요한 월드의 복사본에서 먼저 테스트하세요.
 
 ## 설치
 
 1. Fabric Loader **0.19.5 이상**, Minecraft **26.2**를 사용합니다.
-2. `ai-block-bridge-0.1.11.jar`와 Fabric API **0.160.0+26.2 이상(26.2용)**을 `mods` 폴더에 넣습니다. 기존 버전 JAR는 제거합니다.
+2. `ai-block-bridge-0.1.12.jar`와 Fabric API **0.160.0+26.2 이상(26.2용)**을 `mods` 폴더에 넣습니다. 기존 버전 JAR는 제거합니다.
 3. 싱글플레이는 **치트 허용**이 필요합니다. 멀티플레이는 서버·클라이언트 양쪽에 설치하고 **OP 레벨 4**가 필요합니다.
 4. Java 개발·실행 기준은 **Java 25**입니다.
 
@@ -144,3 +144,38 @@ Recording now captures the initial structure automatically. After retrieving a r
 **0.1.10까지 CC0로 공개된 기존 부분의 이용 권한은 유지됩니다.** MIT 전환은 기존 CC0 권한을 취소하거나 소급하여 제한하지 않습니다. 외부 구성요소는 각자의 라이선스를 유지합니다.
 
 From 0.1.11, the project is distributed under MIT. Preserve the copyright and license notice when redistributing copies or substantial portions. Historical material published through 0.1.10 remains available under CC0; this change does not revoke those permissions. New copyrightable contributions owned by RUOK0214 are offered under MIT. See LICENSE and NOTICE for scope and third-party notices.
+
+
+## 0.1.12 — 엔티티 기록 옵션
+
+- 구조 편집 화면: **엔티티도 포함하기 · 구조**. 영역 가져오기 시점의 엔티티를 `structure.txt`에 포함합니다.
+- 타임라인 화면: **엔티티도 포함하기 · 타임라인**. 기록 시작 시점과 이후 매 서버 틱의 엔티티 변화를 포함합니다.
+- 두 옵션은 독립적이며 기본값은 꺼짐입니다. N 키로 시작해도 현재 옵션이 적용됩니다.
+- 기록 세트의 시작 구조에는 **구조 옵션**, 타임라인에는 **타임라인 옵션**이 적용됩니다.
+- 아이템, 떨어지는 모래/콘크리트 가루, 몹, 화살, 광산 수레, 아이템 액자 등 서버 엔티티의 종류·상대 위치·저장 가능한 전체 NBT를 기록합니다. 플레이어는 제외합니다.
+- 같은 엔티티는 UUID로 연결됩니다. `initial`은 시작 상태, `enter`는 영역에 새로 관측됨, `update`는 위치/NBT 변경, `leave`는 관측 영역에서 사라짐입니다. `enter`/`leave`는 생성/죽음만을 뜻하지 않습니다.
+- 범위 판정은 엔티티 위치가 최소 좌표 이상, 최대 블록 좌표+1 미만인지로 합니다. 한 틱 안에 생겼다가 사라진 엔티티는 서버 틱 끝 샘플링으로 관측되지 않을 수 있습니다.
+
+```text
+# @entity initial UUID | 1.25 2.0 3.75 | minecraft:item | {전체 저장 NBT}
+
+@tick 12
+# @entity update UUID | 1.25 1.5 3.75 | minecraft:item | {변경 후 전체 NBT}
+
+@tick 13
+# @entity leave UUID | 1.25 1.5 3.75 | minecraft:item | {마지막으로 관측한 NBT}
+```
+
+위 예시의 `UUID`와 NBT 설명은 자리표시자입니다. 실제 파일에는 UUID와 실제 SNBT가 들어갑니다.
+별도 위치 필드는 영역 원점 기준 상대 좌표이고, **NBT 안의 Pos·부착 위치 등은 원래 월드 좌표**입니다.
+타임라인 옵션을 켜면 기존 엔티티는 `@tick 0`에 포함되어 구조 옵션이 꺼져 있어도 분석할 수 있습니다.
+엔티티 레코드는 기존 파일과 호환되는 **분석용 주석**입니다. 블록 붙여넣기·되돌리기는 기존처럼 블록만 처리하며 엔티티 생성이나 타임라인 재생을 수행하지 않습니다.
+
+엔티티는 한 시점에 최대 4,096개입니다. 엔티티 기록도 구조 200만 자, 타임라인 2,000만 자/100,000항목 제한에 포함됩니다.
+이동·나이·상태가 자주 바뀌는 엔티티가 많으면 한도에 빨리 도달할 수 있습니다. 한도를 넘는 마지막 틱은 부분 저장하지 않고 제외합니다.
+
+### Entity capture (English)
+Structure capture and timeline recording have independent, default-off **Include entities** switches. Players are excluded.
+Entity comments contain UUID, relative position, registry type and full serialized NBT (whose internal coordinates remain absolute).
+Timelines include existing entities at tick zero and then `enter`, `update`, and `leave` observations at end-of-server-tick resolution.
+Entity comments are analysis data, not entity spawning/replay instructions; block paste/undo behavior is unchanged.
