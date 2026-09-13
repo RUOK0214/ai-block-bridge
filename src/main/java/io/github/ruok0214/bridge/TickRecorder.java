@@ -9,7 +9,7 @@ import net.minecraft.world.level.block.state.BlockState;
 
 /** Captures end-of-server-tick state changes without modifying the world. */
 final class TickRecorder {
-    static final int MAX_TICKS=6000, MAX_CHANGES=100_000;
+    static final int MAX_TICKS=6000, MAX_CHANGES=500_000;
     private final boolean ignoreHopperCooldown;
     private final boolean includeEntities;
     private Map<UUID,EntitySnapshot.State> previousEntities=Map.of();

@@ -31,7 +31,7 @@
   "ai_block_bridge.error.undo_retry": "Undo failed. Recovery data retained; retry: %s",
   "ai_block_bridge.undone": "Undo complete: restored %s blocks.",
   "ai_block_bridge.overlay": "Selection overlay: %s",
-  "ai_block_bridge.filter": "Ignore hopper cooldown: %s · 6,000 ticks / 100,000 entries max",
+  "ai_block_bridge.filter": "Ignore hopper cooldown: %s · 6,000 ticks / 500,000 entries max",
   "ai_block_bridge.on": "On",
   "ai_block_bridge.off": "Off",
   "ai_block_bridge.button.position": "Here",

@@ -31,7 +31,7 @@
   "ai_block_bridge.error.undo_retry": "취소 중 오류. 복원 기록은 유지되었습니다. 다시 시도하세요: %s",
   "ai_block_bridge.undone": "붙여넣기 취소 완료: %s블록 복원",
   "ai_block_bridge.overlay": "선택 영역 표시: %s",
-  "ai_block_bridge.filter": "호퍼 쿨다운 제외: %s · 최대 6,000틱 / 10만 항목",
+  "ai_block_bridge.filter": "호퍼 쿨다운 제외: %s · 최대 6,000틱 / 50만 항목",
   "ai_block_bridge.on": "켜짐",
   "ai_block_bridge.off": "꺼짐",
   "ai_block_bridge.button.position": "내 위치",
