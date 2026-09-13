@@ -13,6 +13,7 @@ final class TickRecorder {
     private final boolean ignoreHopperCooldown;
     private final boolean includeEntities;
     private final boolean ignoreEntityAgeMotion;
+    private final EntityTimelineEncoder entityEncoder;
     private Map<UUID,EntitySnapshot.State> previousEntities=Map.of();
     private final Region region;
     private final String initialStructure;
@@ -44,6 +45,7 @@ final class TickRecorder {
         this.ignoreHopperCooldown=options.ignoreHopperCooldown();
         this.includeEntities=options.timelineEntities();
         this.ignoreEntityAgeMotion=options.ignoreEntityAgeMotion();
+        this.entityEncoder=new EntityTimelineEncoder(options.entityDelta(),options.shortEntityIds());
         this.region=region;
         // Both snapshots run on the server thread before another tick can advance.
         this.initialStructure=BridgeServer.exportRegion(level,region,options.structureEntities());
@@ -60,15 +62,15 @@ final class TickRecorder {
             "\n# origin: "+region.x()+" "+region.y()+" "+region.z()+
             "\n# Only changes after recording started. @tick is a server-tick offset.\n# ignore hopper TransferCooldown: "+ignoreHopperCooldown+"\n");
         if(includeEntities) {
-            text.append("# include entities: true\n").append(EntitySnapshot.header());
+            text.append("# include entities: true\n").append(entityEncoder.header());
             text.append("# ignore entity Age/Motion-only updates: ").append(ignoreEntityAgeMotion).append("\n");
-            if(ignoreEntityAgeMotion)text.append("# Age and Motion alone do not trigger updates. Emitted events retain full current SNBT.\n");
+            if(ignoreEntityAgeMotion)text.append("# Age and Motion alone do not trigger updates. Emitted states retain current SNBT (apply patches when enabled).\n");
             if(text.length()>maxChars-288)throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.export_large"));
             previousEntities=EntitySnapshot.capture(level,region,maxChars,ignoreEntityAgeMotion);
             if(previousEntities.size()>maxChanges)throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.entity_limit",maxChanges));
             if(!previousEntities.isEmpty())text.append("\n@tick 0\n");
             for(var entry:previousEntities.entrySet()) {
-                String line=entry.getValue().line("initial",entry.getKey());
+                String line=entityEncoder.line("initial",entry.getKey(),entry.getValue());
                 if((long)text.length()+line.length()>maxChars-288)throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.export_large"));
                 text.append(line);changes++;
             }
@@ -109,7 +111,7 @@ final class TickRecorder {
                 String event=after==null?"leave":before==null?"enter":"update";
                 count++;
                 if(changes+count>maxChanges) { finish("Entry limit: the final tick was omitted rather than partially recorded.","entries_partial",maxChanges);return; }
-                String line=(after==null?before:after).line(event,id);
+                String line=entityEncoder.line(event,id,after==null?before:after);
                 if((long)text.length()+changed.length()+line.length()>maxChars-288) {
                     finish("Character limit: the final tick was omitted rather than partially recorded.","size_partial",maxChars);return;
                 }

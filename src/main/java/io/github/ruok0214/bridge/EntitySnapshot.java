@@ -11,7 +11,7 @@ import net.minecraft.world.phys.AABB;
 /** Observation only: never creates, moves, loads, or deletes a world entity. */
 final class EntitySnapshot {
     static final int MAX_ENTITIES=4096;
-    record State(String type,double x,double y,double z,String nbt,String comparisonNbt) {
+    record State(String type,double x,double y,double z,String nbt,String comparisonNbt, net.minecraft.nbt.CompoundTag tag) {
         boolean sameRecordedState(State other){
             return other!=null&&type.equals(other.type)&&Double.compare(x,other.x)==0&&Double.compare(y,other.y)==0&&Double.compare(z,other.z)==0&&comparisonNbt.equals(other.comparisonNbt);
         }
@@ -41,13 +41,14 @@ final class EntitySnapshot {
             var output=TagValueOutput.createWithContext(ProblemReporter.DISCARDING,level.registryAccess());
             entity.saveWithoutId(output);
             var tag=output.buildResult();
+            var fullTag=tag.copy();
             String nbt=tag.toString();
             if(ignoreAgeMotion){tag=tag.copy();tag.remove("Age");tag.remove("Motion");}
             String comparisonNbt=ignoreAgeMotion?tag.toString():nbt;
             length+=nbt.length()+256L;
             if(length>maxChars)throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.export_large"));
             result.put(entity.getUUID(),new State(BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString(),
-                entity.getX()-r.x(),entity.getY()-r.y(),entity.getZ()-r.z(),nbt,comparisonNbt));
+                entity.getX()-r.x(),entity.getY()-r.y(),entity.getZ()-r.z(),nbt,comparisonNbt,fullTag));
         }
         return result;
     }

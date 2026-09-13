@@ -168,5 +168,9 @@
   "ai_block_bridge.record_options.title": "Recording options",
   "ai_block_bridge.record_options.noise": "Skip Age/Motion-only updates: %s",
   "ai_block_bridge.record_options.noise_hint": "On by default. Skip updates caused only by top-level Age and Motion. Position, count, other NBT changes and enter/leave remain recorded with full current NBT. Turn off to inspect velocity-only changes or lifetime every tick.",
-  "ai_block_bridge.record_options.hint": "Hover for details. Changes apply to the next recording."
+  "ai_block_bridge.record_options.hint": "Hover for details. Changes apply to the next recording.",
+  "ai_block_bridge.record_options.delta": "Record NBT changes only: %s",
+  "ai_block_bridge.record_options.delta_hint": "Full initial NBT, then changed/deleted top-level keys. Nested values are replaced whole.",
+  "ai_block_bridge.record_options.ids": "Short entity IDs: %s",
+  "ai_block_bridge.record_options.ids_hint": "Uses E1, E2 and a UUID map. Re-entering entities keep their IDs."
 }
