@@ -14,6 +14,7 @@ final class TickRecorder {
     private final boolean includeEntities;
     private final boolean ignoreEntityAgeMotion;
     private final EntityTimelineEncoder entityEncoder;
+    private final BlockTimelineEncoder blockEncoder;
     private Map<UUID,EntitySnapshot.State> previousEntities=Map.of();
     private final Region region;
     private final String initialStructure;
@@ -45,6 +46,7 @@ final class TickRecorder {
         this.ignoreHopperCooldown=options.ignoreHopperCooldown();
         this.includeEntities=options.timelineEntities();
         this.ignoreEntityAgeMotion=options.ignoreEntityAgeMotion();
+        this.blockEncoder=new BlockTimelineEncoder(options.shortBlockStates(),options.blockNbtDelta());
         this.entityEncoder=new EntityTimelineEncoder(options.entityDelta(),options.shortEntityIds());
         this.region=region;
         // Both snapshots run on the server thread before another tick can advance.
@@ -61,6 +63,7 @@ final class TickRecorder {
         this.text=new StringBuilder("# AI Block Bridge Timeline v1\n# size: "+region.sizeX()+" "+region.sizeY()+" "+region.sizeZ()+
             "\n# origin: "+region.x()+" "+region.y()+" "+region.z()+
             "\n# Only changes after recording started. @tick is a server-tick offset.\n# ignore hopper TransferCooldown: "+ignoreHopperCooldown+"\n");
+        text.append(blockEncoder.header());
         if(includeEntities) {
             text.append("# include entities: true\n").append(entityEncoder.header());
             text.append("# ignore entity Age/Motion-only updates: ").append(ignoreEntityAgeMotion).append("\n");
@@ -91,7 +94,8 @@ final class TickRecorder {
             if(!state.equals(previousStates[index]) || !Objects.equals(nbt,oldNbt)) {
                 count++;
                 if(changes+count>maxChanges) { finish("Entry limit: the final tick was omitted rather than partially recorded.","entries_partial",maxChanges);return; }
-                append(changed,new BridgeServer.Cell(p,state,nbt));
+                if(blockEncoder.enabled())changed.append(blockEncoder.line(index,(p.getX()-region.x())+" "+(p.getY()-region.y())+" "+(p.getZ()-region.z()),state,nbt));
+                else append(changed,new BridgeServer.Cell(p,state,nbt));
                 if((long)text.length()+changed.length()>maxChars-288) {
                     finish("Character limit: the final tick was omitted rather than partially recorded.","size_partial",maxChars);return;
                 }

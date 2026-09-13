@@ -10,8 +10,8 @@ class CaptureOptionsTest {
     }
     @Test void optionsAreIndependentAndRoundTrip() {
         for(boolean structure:new boolean[]{false,true})for(boolean timeline:new boolean[]{false,true})
-            for(boolean cooldown:new boolean[]{false,true})for(boolean noise:new boolean[]{false,true})for(boolean delta:new boolean[]{false,true})for(boolean ids:new boolean[]{false,true}) {
-                var options=new CaptureOptions(structure,timeline,cooldown,noise,delta,ids);
+            for(boolean cooldown:new boolean[]{false,true})for(boolean noise:new boolean[]{false,true})for(boolean delta:new boolean[]{false,true})for(boolean ids:new boolean[]{false,true})for(boolean blocks:new boolean[]{false,true})for(boolean nbt:new boolean[]{false,true}) {
+                var options=new CaptureOptions(structure,timeline,cooldown,noise,delta,ids,blocks,nbt);
                 assertEquals(options,CaptureOptions.parse(options.encode()));
             }
         assertThrows(IllegalArgumentException.class,()->CaptureOptions.parse("entities-maybe"));

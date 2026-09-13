@@ -172,5 +172,10 @@
   "ai_block_bridge.record_options.delta": "Record NBT changes only: %s",
   "ai_block_bridge.record_options.delta_hint": "Full initial NBT, then changed/deleted top-level keys. Nested values are replaced whole.",
   "ai_block_bridge.record_options.ids": "Short entity IDs: %s",
-  "ai_block_bridge.record_options.ids_hint": "Uses E1, E2 and a UUID map. Re-entering entities keep their IDs."
+  "ai_block_bridge.record_options.ids_hint": "Uses E1, E2 and a UUID map. Re-entering entities keep their IDs.",
+  "ai_block_bridge.record_options.blocks": "Block recording options",
+  "ai_block_bridge.record_options.block_states": "Short block state IDs: %s",
+  "ai_block_bridge.record_options.block_states_hint": "Uses B1, B2 and a state palette. Ticks and states are preserved.",
+  "ai_block_bridge.record_options.block_nbt": "Record block NBT changes only: %s",
+  "ai_block_bridge.record_options.block_nbt_hint": "Full first NBT, then changed/deleted keys and inventory slots. Disable both options for legacy format."
 }

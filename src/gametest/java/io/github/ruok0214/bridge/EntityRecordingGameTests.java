@@ -33,6 +33,39 @@ public class EntityRecordingGameTests {
         h.assertTrue(recorder.result().contains("# @entity enter E1 |")&&!recorder.result().contains("# @entity-id E2"),"Re-entry changed identity");
         entity.discard();h.succeed();
     }
+    @GameTest(structure="ai_block_bridge_test:large_empty")
+    public void blockPaletteAndInventoryPatches(GameTestHelper h) throws Exception {
+        var old=net.minecraft.nbt.TagParser.parseCompoundFully("{Items:[{Slot:0b,id:'minecraft:stone',count:2},{Slot:2b,id:'minecraft:diamond',count:1}],CustomName:'old'}");
+        var next=net.minecraft.nbt.TagParser.parseCompoundFully("{Items:[{Slot:0b,id:'minecraft:stone',count:3},{Slot:4b,id:'minecraft:emerald',count:1}]}");
+        var patch=BlockTimelineEncoder.diff(old,next);
+        var restored=old.copy();
+        for(var key:(net.minecraft.nbt.ListTag)patch.get("remove"))restored.remove(((net.minecraft.nbt.StringTag)key).value());
+        var set=(net.minecraft.nbt.CompoundTag)patch.get("set");for(String key:set.keySet())restored.put(key,set.get(key).copy());
+        var slots=(net.minecraft.nbt.CompoundTag)patch.get("slots");
+        var items=new java.util.TreeMap<Integer,net.minecraft.nbt.CompoundTag>();
+        for(var value:(net.minecraft.nbt.ListTag)restored.get("Items")){var item=(net.minecraft.nbt.CompoundTag)value;items.put(((net.minecraft.nbt.NumericTag)item.get("Slot")).intValue(),item);}
+        for(var key:(net.minecraft.nbt.ListTag)slots.get("remove"))items.remove(((net.minecraft.nbt.NumericTag)key).intValue());
+        for(var value:(net.minecraft.nbt.ListTag)slots.get("set")){var item=(net.minecraft.nbt.CompoundTag)value;items.put(((net.minecraft.nbt.NumericTag)item.get("Slot")).intValue(),item);}
+        var list=new net.minecraft.nbt.ListTag();items.values().forEach(list::add);restored.put("Items",list);
+        h.assertTrue(restored.equals(next),"Inventory slot add/change/remove failed roundtrip");
+        var empty=net.minecraft.nbt.TagParser.parseCompoundFully("{Items:[]}");
+        h.assertTrue(BlockTimelineEncoder.diff(next,empty).toString().contains("remove:[0,4]"),"Empty slots not removed");
+        var encoder=new BlockTimelineEncoder(true,true);var chest=Blocks.CHEST.defaultBlockState();
+        h.assertTrue(encoder.line(0,"0 0 0",chest,old).contains("# @block full 0 0 0 | B1 |"),"First record must be full");
+        String update=encoder.line(0,"0 0 0",chest,next);
+        h.assertTrue(update.contains("# @block patch")&&!update.contains("# @block-state")&&update.contains("slots:"),"Patch/palette reuse failed");
+        h.assertTrue(encoder.line(0,"0 0 0",Blocks.BARREL.defaultBlockState(),next).contains("# @block full"),"Type replacement must reset baseline");
+        h.assertTrue(encoder.line(0,"0 0 0",Blocks.AIR.defaultBlockState(),null).contains("| none"),"Block removal must clear NBT");
+        var p=h.absolutePos(new BlockPos(2,2,2));var r=region(p);var level=h.getLevel();
+        for(boolean palette:new boolean[]{false,true})for(boolean delta:new boolean[]{false,true}) {
+            level.setBlock(p,Blocks.STONE.defaultBlockState(),Block.UPDATE_ALL);
+            var rec=new TickRecorder(level,r,new CaptureOptions(false,false,true,false,false,false,palette,delta));
+            level.setBlock(p,Blocks.GOLD_BLOCK.defaultBlockState(),Block.UPDATE_ALL);rec.capture(level);
+            String text=rec.result();h.assertTrue(text.contains("# @block full")== (palette||delta),"Options did not select expected block format");
+            h.assertTrue(text.contains("minecraft:gold_block"),"Missing new block state");
+        }
+        h.succeed();
+    }
     private Region region(BlockPos p) { return Region.of(p.getX(),p.getY(),p.getZ(),p.getX()+3,p.getY()+3,p.getZ()+3); }
     private ItemEntity item(GameTestHelper h,BlockPos p) {
         var entity=new ItemEntity(h.getLevel(),p.getX()+0.25,p.getY()+0.5,p.getZ()+0.75,new ItemStack(Items.DIAMOND,3));

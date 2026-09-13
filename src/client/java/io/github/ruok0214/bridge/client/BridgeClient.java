@@ -29,6 +29,7 @@ public final class BridgeClient implements ClientModInitializer {
     public static boolean includeStructureEntities=false,includeTimelineEntities=false;
     public static boolean ignoreEntityAgeMotion=true;
     public static boolean entityDelta=true,shortEntityIds=true;
+    public static boolean shortBlockStates=true,blockNbtDelta=true;
     public static boolean showSelection=true;
     public static final TextHistory history=new TextHistory();
     public static final TextHistory timelineHistory=new TextHistory();
@@ -139,7 +140,7 @@ public final class BridgeClient implements ClientModInitializer {
             var packet=new BridgePacket(pending,action,0,1,dimension,r.x(),r.y(),r.z(),r.maxX(),r.maxY(),r.maxZ(),"");
             String body=action==BridgePacket.PASTE?script:
                 action==BridgePacket.EXPORT?new CaptureOptions(includeStructureEntities,false,true).encode():
-                action==BridgePacket.START_RECORD?new CaptureOptions(includeStructureEntities,includeTimelineEntities,ignoreHopperCooldown,ignoreEntityAgeMotion,entityDelta,shortEntityIds).encode():"";
+                action==BridgePacket.START_RECORD?new CaptureOptions(includeStructureEntities,includeTimelineEntities,ignoreHopperCooldown,ignoreEntityAgeMotion,entityDelta,shortEntityIds,shortBlockStates,blockNbtDelta).encode():"";
             packet.chunks(body,action,ClientPlayNetworking::send);
             status=Messages.text("ai_block_bridge.processing");
         }catch(Exception ex){pending=-1;pendingAction=-1;status=timelineStatus=ex.getMessage();}

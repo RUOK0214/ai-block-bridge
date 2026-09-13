@@ -58,6 +58,9 @@ public final class SelectionClientTest implements FabricClientGameTest {
             context.setScreen(()->new io.github.ruok0214.bridge.client.RecordingOptionsScreen(new TimelineScreen()));
             context.waitForScreen(io.github.ruok0214.bridge.client.RecordingOptionsScreen.class);
             context.takeScreenshot("recording-options");
+            context.setScreen(()->new io.github.ruok0214.bridge.client.BlockRecordingOptionsScreen(new TimelineScreen()));
+            context.waitForScreen(io.github.ruok0214.bridge.client.BlockRecordingOptionsScreen.class);
+            context.takeScreenshot("block-recording-options");
             context.setScreen(BridgeScreen::new);
             context.waitForScreen(BridgeScreen.class);
             context.takeScreenshot("script-editor-english");

@@ -7,7 +7,7 @@ AI와 블록 배치 데이터를 텍스트로 주고받기 위한 모드입니�
 ## 설치
 
 1. Fabric Loader **0.19.5 이상**, Minecraft **26.2**를 사용합니다.
-2. `ai-block-bridge-0.1.17.jar`와 Fabric API **0.160.0+26.2 이상(26.2용)**을 `mods` 폴더에 넣습니다. 기존 버전 JAR는 제거합니다.
+2. `ai-block-bridge-0.1.18.jar`와 Fabric API **0.160.0+26.2 이상(26.2용)**을 `mods` 폴더에 넣습니다. 기존 버전 JAR는 제거합니다.
 3. 싱글플레이는 **치트 허용**이 필요합니다. 멀티플레이는 서버·클라이언트 양쪽에 설치하고 **OP 레벨 4**가 필요합니다.
 4. Java 개발·실행 기준은 **Java 25**입니다.
 
@@ -200,3 +200,9 @@ remove listed top-level keys, then replace each key in set. Nested compounds and
 Re-entry emits full SNBT again. UUID inside initial SNBT is retained. Coordinates remain selection-relative outside SNBT and world-relative within SNBT.
 With Age/Motion filtering, skipped ticks are not recoverable, but subsequent emitted patches reconstruct the full current state.
 Disable both new options for legacy full UUID/full SNBT records. These remain observation comments, not entity spawning instructions.
+
+### Block recording options (0.1.18)
+Timeline > Recording options > Block recording options provides independent short block state IDs and block NBT delta toggles (default on). Disable both for the legacy timeline format. Structure exports and paste syntax are unchanged.
+Compact timelines define `# @block-state B1 = minecraft:...` once per complete state, then emit `# @block full/patch x y z | B1 (or full state) | SNBT (or none)`. These are observation comments. The first change at each position is full, so patches never need an unrecorded baseline. Block-type replacement resets the baseline. `none` clears NBT.
+NBT patches remove named top-level keys, then replace values in `set`. Valid inventories with `Items` lists in both states additionally use `slots:{remove:[slot numbers],set:[full item compounds with Slot]}`. Apply these to Items after the generic patch. Missing slots are unchanged, emptied slots are explicitly removed, and an empty inventory is `Items:[]`. If Items is missing or not a valid unique-slot list, the ordinary top-level NBT patch preserves it instead. Slot list order is not semantically significant.
+No ticks are sampled or dropped by these compression options. Existing cooldown filtering still applies independently. Settings apply to the next recording.
