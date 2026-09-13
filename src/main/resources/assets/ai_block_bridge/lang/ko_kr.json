@@ -168,5 +168,9 @@
   "ai_block_bridge.record_options.title": "기록 옵션",
   "ai_block_bridge.record_options.noise": "Age·Motion만 바뀐 업데이트 제외: %s",
   "ai_block_bridge.record_options.noise_hint": "기본 켜짐. 엔티티의 Age와 Motion만 바뀌면 업데이트를 생략합니다. 위치·수량·다른 NBT 변화와 진입·이탈은 기록하며, 저장하는 이벤트에는 전체 NBT를 유지합니다. 속도만 바뀐 순간이나 매 틱의 수명이 필요하면 끄세요.",
-  "ai_block_bridge.record_options.hint": "마우스를 올리면 설명을 볼 수 있습니다. 다음 기록부터 적용됩니다."
+  "ai_block_bridge.record_options.hint": "마우스를 올리면 설명을 볼 수 있습니다. 다음 기록부터 적용됩니다.",
+  "ai_block_bridge.record_options.delta": "변경된 NBT만 기록: %s",
+  "ai_block_bridge.record_options.delta_hint": "처음에는 전체 NBT, 이후에는 변경·삭제된 최상위 항목을 기록합니다. 중첩 값은 통째로 교체합니다.",
+  "ai_block_bridge.record_options.ids": "짧은 엔티티 번호: %s",
+  "ai_block_bridge.record_options.ids_hint": "UUID 대응표와 E1, E2 번호를 사용합니다. 같은 엔티티가 재진입해도 번호를 유지합니다."
 }

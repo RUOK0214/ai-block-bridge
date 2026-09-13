@@ -11,6 +11,28 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 
 public class EntityRecordingGameTests {
+    @GameTest(structure="ai_block_bridge_test:large_empty")
+    public void compactEntityStatesAreReconstructible(GameTestHelper h) {
+        var old=new net.minecraft.nbt.CompoundTag();old.putInt("deleted",1);
+        var nested=new net.minecraft.nbt.CompoundTag();nested.putInt("old",2);old.put("nested",nested);
+        var next=new net.minecraft.nbt.CompoundTag();var replacement=new net.minecraft.nbt.CompoundTag();replacement.putString("new","a|b");next.put("nested",replacement);next.putInt("added",3);
+        var patch=EntityTimelineEncoder.diff(old,next);var rebuilt=old.copy();
+        for(var key:(net.minecraft.nbt.ListTag)patch.get("remove"))rebuilt.remove(((net.minecraft.nbt.StringTag)key).value());
+        var set=(net.minecraft.nbt.CompoundTag)patch.get("set");for(String key:set.keySet())rebuilt.put(key,set.get(key).copy());
+        h.assertTrue(rebuilt.equals(next),"Patch failed nested replacement/add/delete roundtrip");
+        var p=h.absolutePos(new BlockPos(2,2,2));var r=region(p);var level=h.getLevel();var entity=item(h,p);
+        var recorder=new TickRecorder(level,r,new CaptureOptions(false,true,true,true,true,true));
+        h.assertTrue(recorder.result().contains("# @entity-id E1 = "+entity.getUUID())&&recorder.result().contains("# @entity initial E1 |"),"Missing ID map or initial state");
+        entity.setDeltaMovement(0.1,0,0);recorder.capture(level);
+        h.assertTrue(!recorder.result().contains("@tick 1\n"),"Noise update was emitted");
+        entity.setItem(new ItemStack(Items.DIAMOND,7));recorder.capture(level);
+        h.assertTrue(recorder.result().contains("# @entity patch E1 |")&&recorder.result().contains("set:{")&&recorder.result().contains("Motion:[0.1d,0.0d,0.0d]"),"Patch used sampled instead of emitted baseline");
+        entity.setPos(r.maxX()+2,p.getY(),p.getZ());recorder.capture(level);
+        h.assertTrue(recorder.result().contains("# @entity leave-patch E1 |"),"Missing compact leave");
+        entity.setPos(p.getX()+0.25,p.getY()+0.5,p.getZ()+0.75);recorder.capture(level);
+        h.assertTrue(recorder.result().contains("# @entity enter E1 |")&&!recorder.result().contains("# @entity-id E2"),"Re-entry changed identity");
+        entity.discard();h.succeed();
+    }
     private Region region(BlockPos p) { return Region.of(p.getX(),p.getY(),p.getZ(),p.getX()+3,p.getY()+3,p.getZ()+3); }
     private ItemEntity item(GameTestHelper h,BlockPos p) {
         var entity=new ItemEntity(h.getLevel(),p.getX()+0.25,p.getY()+0.5,p.getZ()+0.75,new ItemStack(Items.DIAMOND,3));
