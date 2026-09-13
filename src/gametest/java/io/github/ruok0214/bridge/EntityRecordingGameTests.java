@@ -53,12 +53,12 @@ public class EntityRecordingGameTests {
         h.succeed();
     }
     @GameTest(structure="ai_block_bridge_test:large_empty")
-    public void fallingPowderAndWholeTickLimit(GameTestHelper h) {
+    public void fallingBlockAndWholeTickLimit(GameTestHelper h) {
         var p=h.absolutePos(new BlockPos(2,2,2));var r=region(p);var level=h.getLevel();
-        level.setBlock(p,Blocks.LIME_CONCRETE_POWDER.defaultBlockState(),Block.UPDATE_ALL);
-        var falling=FallingBlockEntity.fall(level,p,Blocks.LIME_CONCRETE_POWDER.defaultBlockState());
+        level.setBlock(p,Blocks.SAND.defaultBlockState(),Block.UPDATE_ALL);
+        var falling=FallingBlockEntity.fall(level,p,Blocks.SAND.defaultBlockState());
         String snapshot=BridgeServer.exportRegion(level,r,true);
-        h.assertTrue(snapshot.contains("minecraft:falling_block")&&snapshot.contains("minecraft:lime_concrete_powder"),"Missing falling block state");
+        h.assertTrue(snapshot.contains("minecraft:falling_block")&&snapshot.contains("minecraft:sand"),"Missing falling block state");
         falling.discard();
         var recorder=new TickRecorder(level,r,new CaptureOptions(false,true,true),10,1,16000);
         var a=item(h,p);var b=item(h,p);
