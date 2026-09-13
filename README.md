@@ -2,12 +2,12 @@
 
 Minecraft **Java 26.2 / Fabric** — 제작자 **RUOK0214**.
 AI와 블록 배치 데이터를 텍스트로 주고받기 위한 모드입니다. AI API나 인터넷 연결은 사용하지 않습니다.
-현재 버전: **0.1.11**. 중요한 월드의 복사본에서 먼저 테스트하세요.
+현재 버전: **0.1.17**. 중요한 월드의 복사본에서 먼저 테스트하세요.
 
 ## 설치
 
 1. Fabric Loader **0.19.5 이상**, Minecraft **26.2**를 사용합니다.
-2. `ai-block-bridge-0.1.11.jar`와 Fabric API **0.160.0+26.2 이상(26.2용)**을 `mods` 폴더에 넣습니다. 기존 버전 JAR는 제거합니다.
+2. `ai-block-bridge-0.1.18.jar`와 Fabric API **0.160.0+26.2 이상(26.2용)**을 `mods` 폴더에 넣습니다. 기존 버전 JAR는 제거합니다.
 3. 싱글플레이는 **치트 허용**이 필요합니다. 멀티플레이는 서버·클라이언트 양쪽에 설치하고 **OP 레벨 4**가 필요합니다.
 4. Java 개발·실행 기준은 **Java 25**입니다.
 
@@ -27,7 +27,7 @@ AI와 블록 배치 데이터를 텍스트로 주고받기 위한 모드입니�
 
 ## 기록 제한 알림
 
-6,000틱, 변경 항목 100,000개 또는 기록 용량 20,000,000자 제한에 도달하면 기록을 멈추고 **화면 안내와 채팅에 이유를 한 번 표시**합니다. 영역을 더 이상 불러올 수 없을 때도 알립니다.
+6,000틱, 변경 항목 500,000개 또는 기록 용량 20,000,000자 제한에 도달하면 기록을 멈추고 **화면 안내와 채팅에 이유를 한 번 표시**합니다. 영역을 더 이상 불러올 수 없을 때도 알립니다.
 
 완료된 기록은 접속 중 서버에 보관됩니다. **N 키 또는 틱 기록 창의 ‘기록 가져오기’**로 가져와 파일로 내보내세요. 가져오기 전에는 새 기록을 시작할 수 없습니다. 한 틱 중간에 용량·항목 제한을 넘으면 해당 틱 전체를 제외하고, 이전에 완료한 틱은 유지합니다. 게임 종료·접속 해제 전 파일로 저장하세요.
 
@@ -75,7 +75,7 @@ AI와 블록 배치 데이터를 텍스트로 주고받기 위한 모드입니�
 - 기록을 시작한 다음 서버 틱부터 계산하며, 변화가 없는 틱은 생략합니다.
 - 같은 틱에 바뀐 블록은 하나의 `@tick` 구역에 모읍니다.
 - 블록 상태와 블록 엔티티 NBT를 기록하고, 사라진 블록은 `minecraft:air`로 남깁니다.
-- 최대 6,000틱(20 TPS 기준 5분), 변경 항목 100,000개 또는 20,000,000자까지 기록합니다. 제한에 도달하면 수집을 중단하고 기존 기록을 보존합니다. `N` 또는 기록 중지로 결과를 가져오세요. 제한을 넘기는 틱은 부분 기록하지 않습니다.
+- 최대 6,000틱(20 TPS 기준 5분), 변경 항목 500,000개 또는 20,000,000자까지 기록합니다. 제한에 도달하면 수집을 중단하고 기존 기록을 보존합니다. `N` 또는 기록 중지로 결과를 가져오세요. 제한을 넘기는 틱은 부분 기록하지 않습니다.
 - 기록 창의 **호퍼 쿨다운 제외**는 기본 켜짐입니다. 호퍼 NBT의 `TransferCooldown`을 비교·출력에서 제외하되 아이템 내용물과 블록 상태 변화는 유지합니다. 끄면 원본 NBT를 기록합니다. 옵션은 기록 시작 전에 선택하며 이번 게임 실행 동안 유지됩니다.
 - 배치 스크립트는 기존 2,000,000자 제한을 유지합니다. 큰 기록은 전송·편집창 표시 시 잠시 지연될 수 있습니다.
 - 기록 스크립트는 전용 창에서 편집·복사·불러오기·내보내기 할 수 있습니다. 현재 버전에서는 분석용이며 월드 재생이나 붙여넣기에 사용하지 않습니다.
@@ -144,3 +144,65 @@ Recording now captures the initial structure automatically. After retrieving a r
 **0.1.10까지 CC0로 공개된 기존 부분의 이용 권한은 유지됩니다.** MIT 전환은 기존 CC0 권한을 취소하거나 소급하여 제한하지 않습니다. 외부 구성요소는 각자의 라이선스를 유지합니다.
 
 From 0.1.11, the project is distributed under MIT. Preserve the copyright and license notice when redistributing copies or substantial portions. Historical material published through 0.1.10 remains available under CC0; this change does not revoke those permissions. New copyrightable contributions owned by RUOK0214 are offered under MIT. See LICENSE and NOTICE for scope and third-party notices.
+
+
+## 0.1.14 — 엔티티 기록 옵션
+
+- 구조 편집 화면: **엔티티도 포함하기 · 구조**. 영역 가져오기 시점의 엔티티를 `structure.txt`에 포함합니다.
+- 타임라인 화면: **엔티티도 포함하기 · 타임라인**. 기록 시작 시점과 이후 매 서버 틱의 엔티티 변화를 포함합니다.
+- 두 옵션은 독립적이며 기본값은 꺼짐입니다. N 키로 시작해도 현재 옵션이 적용됩니다.
+- 기록 세트의 시작 구조에는 **구조 옵션**, 타임라인에는 **타임라인 옵션**이 적용됩니다.
+- 아이템, 떨어지는 모래/콘크리트 가루, 몹, 화살, 광산 수레, 아이템 액자 등 서버 엔티티의 종류·상대 위치·저장 가능한 전체 NBT를 기록합니다. 플레이어는 제외합니다.
+- 같은 엔티티는 UUID로 연결됩니다. `initial`은 시작 상태, `enter`는 영역에 새로 관측됨, `update`는 위치/NBT 변경, `leave`는 관측 영역에서 사라짐입니다. `enter`/`leave`는 생성/죽음만을 뜻하지 않습니다.
+- 범위 판정은 엔티티 위치가 최소 좌표 이상, 최대 블록 좌표+1 미만인지로 합니다. 한 틱 안에 생겼다가 사라진 엔티티는 서버 틱 끝 샘플링으로 관측되지 않을 수 있습니다.
+
+```text
+# @entity initial UUID | 1.25 2.0 3.75 | minecraft:item | {전체 저장 NBT}
+
+@tick 12
+# @entity update UUID | 1.25 1.5 3.75 | minecraft:item | {변경 후 전체 NBT}
+
+@tick 13
+# @entity leave UUID | 1.25 1.5 3.75 | minecraft:item | {마지막으로 관측한 NBT}
+```
+
+위 예시의 `UUID`와 NBT 설명은 자리표시자입니다. 실제 파일에는 UUID와 실제 SNBT가 들어갑니다.
+별도 위치 필드는 영역 원점 기준 상대 좌표이고, **NBT 안의 Pos·부착 위치 등은 원래 월드 좌표**입니다.
+타임라인 옵션을 켜면 기존 엔티티는 `@tick 0`에 포함되어 구조 옵션이 꺼져 있어도 분석할 수 있습니다.
+엔티티 레코드는 기존 파일과 호환되는 **분석용 주석**입니다. 블록 붙여넣기·되돌리기는 기존처럼 블록만 처리하며 엔티티 생성이나 타임라인 재생을 수행하지 않습니다.
+
+엔티티는 한 시점에 최대 4,096개입니다. 엔티티 기록도 구조 200만 자, 타임라인 2,000만 자/500,000항목 제한에 포함됩니다.
+이동·나이·상태가 자주 바뀌는 엔티티가 많으면 한도에 빨리 도달할 수 있습니다. 한도를 넘는 마지막 틱은 부분 저장하지 않고 제외합니다.
+
+### Entity capture (English)
+Structure capture and timeline recording have independent, default-off **Include entities** switches. Players are excluded.
+Entity comments contain UUID, relative position, registry type and full serialized NBT (whose internal coordinates remain absolute).
+Timelines include existing entities at tick zero and then `enter`, `update`, and `leave` observations at end-of-server-tick resolution.
+Entity comments are analysis data, not entity spawning/replay instructions; block paste/undo behavior is unchanged.
+
+기록 메뉴의 `기록세트 저장 | 기록세트 폴더 열기`에서 최근 저장한 세트의 폴더를 바로 열 수 있습니다. 재실행 후에도 경로를 기억하며, 저장 이력이 없거나 폴더가 사라졌으면 기본 `ai-block-bridge` 폴더를 엽니다.
+
+## 0.1.15 — 메뉴 정리
+
+상단의 `구조 | 타임라인 | AI 요청문 | 도움말`로 화면을 이동합니다. 두 화면의 `영역 설정`에서 좌표를 변경하고 적용합니다. 구조 화면의 영역 캡처·엔티티 옵션과 월드 붙여넣기를 구분하고, 타임라인 화면에는 기록 시작·중지·엔티티·호퍼 옵션을 모았습니다. 파일 작업은 두 화면 모두 아래쪽 같은 위치에 있습니다. `기록세트 저장 | 기록세트 폴더 열기`는 그대로 유지합니다.
+
+## 0.1.17 — 엔티티 반복 업데이트 제외
+
+타임라인의 `기록 옵션`에서 엔티티 포함, `Age·Motion만 바뀐 업데이트 제외`, 호퍼 쿨다운 제외를 설정합니다. 새 옵션은 기본 켜짐이며 다음 기록부터 적용됩니다. 위치·수량·다른 NBT 변경과 초기/진입/이탈 기록은 보존하고, 출력 이벤트에는 전체 현재 NBT가 포함됩니다. 속도만 변한 순간이나 매 틱의 수명이 필요하면 끄세요. 구조 스냅샷에는 영향을 주지 않습니다. 시간 간격 사이의 생략된 Age/Motion 값은 복원할 수 없습니다.
+
+### Compact entity timeline (0.1.17)
+Recording options independently enable NBT changes only and short entity IDs (both default on).
+Structure exports remain full snapshots. Timeline initial/enter events contain full SNBT.
+`# @entity-id E1 = UUID` defines a recording-local ID, retained across re-entry and never reused.
+`# @entity patch E1 | x y z | type | {set:{...},remove:[...]}` updates the last emitted state:
+remove listed top-level keys, then replace each key in set. Nested compounds and lists replace whole values.
+`leave-patch` applies a final patch to the last observed in-region state and ends membership; it does not imply death.
+Re-entry emits full SNBT again. UUID inside initial SNBT is retained. Coordinates remain selection-relative outside SNBT and world-relative within SNBT.
+With Age/Motion filtering, skipped ticks are not recoverable, but subsequent emitted patches reconstruct the full current state.
+Disable both new options for legacy full UUID/full SNBT records. These remain observation comments, not entity spawning instructions.
+
+### Block recording options (0.1.18)
+Timeline > Recording options > Block recording options provides independent short block state IDs and block NBT delta toggles (default on). Disable both for the legacy timeline format. Structure exports and paste syntax are unchanged.
+Compact timelines define `# @block-state B1 = minecraft:...` once per complete state, then emit `# @block full/patch x y z | B1 (or full state) | SNBT (or none)`. These are observation comments. The first change at each position is full, so patches never need an unrecorded baseline. Block-type replacement resets the baseline. `none` clears NBT.
+NBT patches remove named top-level keys, then replace values in `set`. Valid inventories with `Items` lists in both states additionally use `slots:{remove:[slot numbers],set:[full item compounds with Slot]}`. Apply these to Items after the generic patch. Missing slots are unchanged, emptied slots are explicitly removed, and an empty inventory is `Items:[]`. If Items is missing or not a valid unique-slot list, the ordinary top-level NBT patch preserves it instead. Slot list order is not semantically significant.
+No ticks are sampled or dropped by these compression options. Existing cooldown filtering still applies independently. Settings apply to the next recording.

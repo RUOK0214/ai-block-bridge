@@ -55,9 +55,20 @@ public final class SelectionClientTest implements FabricClientGameTest {
             });
             context.waitForScreen(TimelineScreen.class);
             context.takeScreenshot("timeline-editor");
+            context.setScreen(()->new io.github.ruok0214.bridge.client.RecordingOptionsScreen(new TimelineScreen()));
+            context.waitForScreen(io.github.ruok0214.bridge.client.RecordingOptionsScreen.class);
+            context.takeScreenshot("recording-options");
+            context.setScreen(()->new io.github.ruok0214.bridge.client.BlockRecordingOptionsScreen(new TimelineScreen()));
+            context.waitForScreen(io.github.ruok0214.bridge.client.BlockRecordingOptionsScreen.class);
+            context.takeScreenshot("block-recording-options");
             context.setScreen(BridgeScreen::new);
             context.waitForScreen(BridgeScreen.class);
             context.takeScreenshot("script-editor-english");
+            context.setScreen(()->new io.github.ruok0214.bridge.client.RegionScreen(new BridgeScreen()));
+            context.waitForScreen(io.github.ruok0214.bridge.client.RegionScreen.class);
+            context.takeScreenshot("selection-area-settings");
+            context.setScreen(BridgeScreen::new);
+            context.waitForScreen(BridgeScreen.class);
             context.runOnClient(mc->{
                 for(String mode:new String[]{"explain","design","fix"}) {
                     String prompt=AiPromptScreen.createPrompt(mode);

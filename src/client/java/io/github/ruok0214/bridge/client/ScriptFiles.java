@@ -9,6 +9,35 @@ import java.nio.file.*;
 import java.io.IOException;
 
 public final class ScriptFiles {
+    private static Path lastRecordingFolder;
+    private static Path recordingFolderPreference() {
+        return FabricLoader.getInstance().getConfigDir().resolve("ai-block-bridge-last-recording.txt");
+    }
+    public static void rememberRecordingFolder(Path folder) {
+        lastRecordingFolder=folder.toAbsolutePath().normalize();
+        try {
+            Files.createDirectories(recordingFolderPreference().getParent());
+            write(recordingFolderPreference(),lastRecordingFolder.toString());
+        } catch(IOException ex) {
+            // Saving the recording itself succeeded; keep the folder available for this session.
+            org.slf4j.LoggerFactory.getLogger("ai_block_bridge").warn("Could not remember recording folder",ex);
+        }
+    }
+    public static Path recordingFolder() throws IOException {
+        if(lastRecordingFolder==null) {
+            try {
+                Path preference=recordingFolderPreference();
+                if(Files.isRegularFile(preference))lastRecordingFolder=Path.of(read(preference,8192).strip()).toAbsolutePath().normalize();
+            } catch(IOException|InvalidPathException ex) {
+                org.slf4j.LoggerFactory.getLogger("ai_block_bridge").warn("Could not read recording folder preference",ex);
+            }
+        }
+        if(lastRecordingFolder!=null&&Files.isDirectory(lastRecordingFolder))return lastRecordingFolder;
+        Path fallback=FabricLoader.getInstance().getGameDir().resolve("ai-block-bridge").toAbsolutePath();
+        Files.createDirectories(fallback);
+        return fallback;
+    }
+
     public static Path choose(boolean save) throws IOException {
         return choose(save,"structure.txt");
     }

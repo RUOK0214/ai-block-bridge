@@ -65,9 +65,9 @@ public final class BridgeServer {
             if(packet.action()==BridgePacket.STOP_RECORD) { stopRecording(player,packet);return; }
             Region region=packet.region();
             validateRegion(level,region);
-            if(packet.action()==BridgePacket.START_RECORD) { startRecording(player,packet,level,region);return; }
+            if(packet.action()==BridgePacket.START_RECORD) { startRecording(player,packet,level,region,body);return; }
             if(packet.action()==BridgePacket.EXPORT) {
-                String result=exportRegion(level,region);
+                String result=exportRegion(level,region,CaptureOptions.parse(body).structureEntities());
                 packet.chunks(result,BridgePacket.SCRIPT,p->ServerPlayNetworking.send(player,p));
             } else paste(player,packet,level,region,body);
         } catch(Exception ex) {
@@ -75,9 +75,10 @@ public final class BridgeServer {
             reply(player,packet,Messages.text("ai_block_bridge.error", safeMessage(ex)));
         }
     }
-    private static void startRecording(ServerPlayer player,BridgePacket packet,ServerLevel level,Region region) {
+    private static void startRecording(ServerPlayer player,BridgePacket packet,ServerLevel level,Region region,String body) {
         if(recordings.containsKey(player.getUUID())) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.already_recording"));
-        recordings.put(player.getUUID(),new Recording(packet.dimension(),new TickRecorder(level,region,!packet.text().equals("include-cooldown")),packet));
+        CaptureOptions options=CaptureOptions.parse(body);
+        recordings.put(player.getUUID(),new Recording(packet.dimension(),new TickRecorder(level,region,options),packet));
         reply(player,packet,Messages.text("ai_block_bridge.timeline.started"));
     }
     private static void stopRecording(ServerPlayer player,BridgePacket packet) {
@@ -112,7 +113,8 @@ public final class BridgeServer {
         BlockEntity be=level.getBlockEntity(pos);
         return new Cell(pos.immutable(),level.getBlockState(pos),be==null?null:be.saveWithFullMetadata(level.registryAccess()));
     }
-    static String exportRegion(ServerLevel level,Region r) {
+    static String exportRegion(ServerLevel level,Region r) { return exportRegion(level,r,false); }
+    static String exportRegion(ServerLevel level,Region r,boolean includeEntities) {
         StringBuilder text=new StringBuilder("# AI Block Bridge Script v1\n# size: "+r.sizeX()+" "+r.sizeY()+" "+r.sizeZ()+
             "\n# origin: "+r.x()+" "+r.y()+" "+r.z()+"\n# Air is omitted. Unlisted coordinates are unchanged on paste.\n");
         for(BlockPos p:BlockPos.betweenClosed(r.x(),r.y(),r.z(),r.maxX(),r.maxY(),r.maxZ())) {
@@ -127,6 +129,15 @@ public final class BridgeServer {
             }
             text.append('\n');
             if(text.length()>Script.MAX_CHARS) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.export_large"));
+        }
+        if(includeEntities) {
+            text.append("# include entities: true\n").append(EntitySnapshot.header());
+            if(text.length()>Script.MAX_CHARS)throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.export_large"));
+            for(var entry:EntitySnapshot.capture(level,r,Script.MAX_CHARS).entrySet()) {
+                String line=entry.getValue().line("initial",entry.getKey());
+                if((long)text.length()+line.length()>Script.MAX_CHARS)throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.export_large"));
+                text.append(line);
+            }
         }
         return text.toString();
     }
