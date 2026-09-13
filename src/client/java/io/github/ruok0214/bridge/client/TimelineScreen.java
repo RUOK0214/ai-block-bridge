@@ -39,8 +39,9 @@ public final class TimelineScreen extends Screen {
             .build(font,width-16,Math.max(40,height-197),Messages.component(Messages.text("ai_block_bridge.editor.timeline")));
         editor.setCharacterLimit(Script.MAX_TIMELINE_CHARS);editor.setValue(BridgeClient.timeline);
         editor.setValueListener(value->{if(!syncing)BridgeClient.replaceTimeline(value);});addRenderableWidget(editor);
-        bundle=button(Messages.text("ai_block_bridge.bundle.save"),8,height-91,width-16,this::exportBundle);
+        bundle=button(Messages.text("ai_block_bridge.bundle.save"),8,height-91,(width-20)/2,this::exportBundle);
         bundle.active=BridgeClient.recordingBundle!=null;
+        button(Messages.text("ai_block_bridge.bundle.open_folder"),12+(width-20)/2,height-91,width-20-(width-20)/2,this::openRecordingFolder);
         int bottom=height-67;
         load=button(Messages.text("ai_block_bridge.button.import"),8,bottom,w,this::importFile);
         save=button(Messages.text("ai_block_bridge.button.export"),12+w,bottom,w,this::exportFile);
@@ -62,8 +63,12 @@ public final class TimelineScreen extends Screen {
         RecordingBundle original=BridgeClient.recordingBundle;if(original==null)return;
         Path parent=ScriptFiles.chooseDirectory();if(parent==null)return;
         Path folder=RecordingFiles.save(parent,original);
+        ScriptFiles.rememberRecordingFolder(folder);
         BridgeClient.timelineStatus=Messages.text("ai_block_bridge.saved",folder);
     }catch(Exception ex){BridgeClient.timelineStatus=Messages.text("ai_block_bridge.save_failed",ex.getMessage());}}
+    private void openRecordingFolder(){try{
+        net.minecraft.util.Util.getPlatform().openFile(ScriptFiles.recordingFolder().toFile());
+    }catch(Exception ex){BridgeClient.timelineStatus=Messages.text("ai_block_bridge.bundle.open_failed",ex.getMessage());}}
     private void exportFile(){try{
         Path file=ScriptFiles.choose(true,"timeline.txt");if(file==null)return;Runnable write=()->{try{ScriptFiles.write(file,BridgeClient.timeline);BridgeClient.timelineStatus=Messages.text("ai_block_bridge.saved", file.getFileName());}catch(Exception ex){BridgeClient.timelineStatus=Messages.text("ai_block_bridge.save_failed", ex.getMessage());}};
         if(Files.exists(file))confirm(Messages.text("ai_block_bridge.confirm.overwrite_title"),Messages.text("ai_block_bridge.confirm.overwrite", file.getFileName()),write);else write.run();
