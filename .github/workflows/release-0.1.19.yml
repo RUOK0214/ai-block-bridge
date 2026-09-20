@@ -1,0 +1,69 @@
+name: Publish 0.1.19
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [.github/workflows/release-0.1.19.yml]
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: release-v0.1.19
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_COMMIT: a662ce00f41ebeccfac91d04b275ec293c2e4250
+      BUILD_RUN: '35483637862'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify tested build
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "repos/$GH_REPO/actions/runs/$BUILD_RUN" > /tmp/build-run.json
+          jq -e --arg commit "$RELEASE_COMMIT" '.head_sha == $commit and .conclusion == "success" and .event == "push" and .head_branch == "main"' /tmp/build-run.json
+          gh run download "$BUILD_RUN" --name ai-block-bridge-26.2 --dir release-assets
+      - name: Verify and prepare install JAR
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, zipfile, hashlib, shutil
+          folder = pathlib.Path('release-assets')
+          jar = folder / 'ai-block-bridge-0.1.19.jar'
+          assert jar.is_file(), 'Expected install JAR is missing'
+          with zipfile.ZipFile(jar) as archive:
+              metadata = json.loads(archive.read('fabric.mod.json'))
+              assert metadata['id'] == 'ai_block_bridge' and metadata['version'] == '0.1.19'
+              assert metadata['depends']['minecraft'] == '~26.2'
+              assert metadata['license'] == 'MIT'
+              required = [
+                  'io/github/ruok0214/bridge/PaletteFormat.class',
+                  'io/github/ruok0214/bridge/CaptureOptions.class',
+                  'io/github/ruok0214/bridge/BlockTimelineEncoder.class',
+                  'io/github/ruok0214/bridge/EntityTimelineEncoder.class',
+                  'io/github/ruok0214/bridge/client/RecordingOptionsScreen.class'
+              ]
+              assert all(name in archive.namelist() for name in required)
+              for notice in ['LICENSE', 'NOTICE', 'licenses/CC0-1.0.txt']:
+                  assert archive.read(notice) == pathlib.Path(notice).read_bytes()
+              for language in ['ko_kr', 'en_us']:
+                  text = json.loads(archive.read(f'assets/ai_block_bridge/lang/{language}.json'))
+                  assert 'ai_block_bridge.format' in text
+          for source in folder.glob('*-sources.jar'):
+              source.unlink()
+          shutil.copyfile('docs/releases/v0.1.19.md', folder / 'INSTALL-AND-GUIDE.md')
+          shutil.copyfile('LICENSE', folder / 'LICENSE.txt')
+          shutil.copyfile('NOTICE', folder / 'NOTICE.txt')
+          (folder / 'SHA256SUMS.txt').write_text(hashlib.sha256(jar.read_bytes()).hexdigest() + '  ' + jar.name + '\n')
+          PY
+      - name: Publish release
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create v0.1.19 --target "$RELEASE_COMMIT" --draft --title 'AI Block Bridge 0.1.19 · Minecraft 26.2 / Fabric' --notes-file docs/releases/v0.1.19.md
+          gh release upload v0.1.19 release-assets/ai-block-bridge-0.1.19.jar release-assets/INSTALL-AND-GUIDE.md release-assets/SHA256SUMS.txt release-assets/LICENSE.txt release-assets/NOTICE.txt
+          gh release edit v0.1.19 --draft=false --latest --notes-file docs/releases/v0.1.19.md
