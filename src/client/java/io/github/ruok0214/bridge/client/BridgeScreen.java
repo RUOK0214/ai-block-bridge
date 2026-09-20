@@ -17,6 +17,7 @@ public final class BridgeScreen extends Screen {
     private final List<Button> actions=new ArrayList<>();
     private MultiLineEditBox editor;
     private Button exportUndoButton;
+    private Button formatButton;
     private boolean syncing;
     public BridgeScreen() { super(Messages.component("AI Block Bridge")); }
     private Button button(String title,int x,int y,int w,Runnable action) {
@@ -51,8 +52,11 @@ public final class BridgeScreen extends Screen {
         button(Messages.text("ai_block_bridge.button.timeline"),20+toolbarWidth*3,78,toolbarWidth,()->minecraft.gui.setScreen(new TimelineScreen()));
         button(Messages.text("ai_block_bridge.prompt.open"),24+toolbarWidth*4,78,toolbarWidth,()->minecraft.gui.setScreen(new AiPromptScreen(this)));
         button(Messages.text("ai_block_bridge.button.close"),28+toolbarWidth*5,78,toolbarWidth,this::onClose);
-        editor=MultiLineEditBox.builder().setX(8).setY(116).setShowDecorations(true)
-            .build(font,width-16,Math.max(30,height-203),Messages.component(Messages.text("ai_block_bridge.editor.script")));
+        formatButton=button(formatLabel(),8,116,width-16,()->{
+            BridgeClient.paletteFormat=!BridgeClient.paletteFormat;formatButton.setMessage(Messages.component(formatLabel()));
+        });
+        editor=MultiLineEditBox.builder().setX(8).setY(140).setShowDecorations(true)
+            .build(font,width-16,Math.max(30,height-227),Messages.component(Messages.text("ai_block_bridge.editor.script")));
         editor.setCharacterLimit(Script.MAX_CHARS);
         editor.setValue(BridgeClient.script);
         editor.setValueListener(value->{if(!syncing)BridgeClient.replace(value);});
@@ -83,6 +87,7 @@ public final class BridgeScreen extends Screen {
         });
         button(Messages.text("ai_block_bridge.button.undo_paste"),20+w*3,bottom+24,w,()->confirm(Messages.text("ai_block_bridge.confirm.undo_title"), Messages.text("ai_block_bridge.confirm.undo"),()->BridgeClient.send(BridgePacket.UNDO)));
     }
+    private String formatLabel(){return Messages.text("ai_block_bridge.format",Messages.text(BridgeClient.paletteFormat?"ai_block_bridge.format.palette":"ai_block_bridge.format.readable"));}
     private boolean applyCoordinates() {
         try {
             int[] v=new int[6];for(int i=0;i<6;i++)v[i]=Integer.parseInt(coordinates[i].getValue());

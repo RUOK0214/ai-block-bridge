@@ -26,6 +26,7 @@ public final class BridgeClient implements ClientModInitializer {
     public static boolean recordingAvailable;
     private static String recordingStopReason;
     public static boolean ignoreHopperCooldown=true;
+    public static boolean paletteFormat=false;
     public static boolean showSelection=true;
     public static final TextHistory history=new TextHistory();
     public static final TextHistory timelineHistory=new TextHistory();
@@ -134,7 +135,13 @@ public final class BridgeClient implements ClientModInitializer {
             pending=++requestId;pendingAction=action;sentAt=System.nanoTime();response=null;
             exportBefore=script;
             var packet=new BridgePacket(pending,action,0,1,dimension,r.x(),r.y(),r.z(),r.maxX(),r.maxY(),r.maxZ(),"");
-            packet.chunks(action==BridgePacket.PASTE?script:action==BridgePacket.START_RECORD&&!ignoreHopperCooldown?"include-cooldown":"",action,ClientPlayNetworking::send);
+            String options="";
+            if(action==BridgePacket.EXPORT&&paletteFormat)options="palette";
+            else if(action==BridgePacket.START_RECORD) {
+                if(!ignoreHopperCooldown)options="include-cooldown";
+                if(paletteFormat)options+=(options.isEmpty()?"":";")+"palette";
+            }
+            packet.chunks(action==BridgePacket.PASTE?script:options,action,ClientPlayNetworking::send);
             status=Messages.text("ai_block_bridge.processing");
         }catch(Exception ex){pending=-1;pendingAction=-1;status=timelineStatus=ex.getMessage();}
     }

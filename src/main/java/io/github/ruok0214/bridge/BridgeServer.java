@@ -68,6 +68,7 @@ public final class BridgeServer {
             if(packet.action()==BridgePacket.START_RECORD) { startRecording(player,packet,level,region);return; }
             if(packet.action()==BridgePacket.EXPORT) {
                 String result=exportRegion(level,region);
+                if(packet.text().contains("palette"))result=PaletteFormat.encode(result);
                 packet.chunks(result,BridgePacket.SCRIPT,p->ServerPlayNetworking.send(player,p));
             } else paste(player,packet,level,region,body);
         } catch(Exception ex) {
@@ -77,7 +78,9 @@ public final class BridgeServer {
     }
     private static void startRecording(ServerPlayer player,BridgePacket packet,ServerLevel level,Region region) {
         if(recordings.containsKey(player.getUUID())) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.already_recording"));
-        recordings.put(player.getUUID(),new Recording(packet.dimension(),new TickRecorder(level,region,!packet.text().equals("include-cooldown")),packet));
+        boolean includeCooldown=packet.text().contains("include-cooldown");
+        boolean palette=packet.text().contains("palette");
+        recordings.put(player.getUUID(),new Recording(packet.dimension(),new TickRecorder(level,region,!includeCooldown,palette),packet));
         reply(player,packet,Messages.text("ai_block_bridge.timeline.started"));
     }
     private static void stopRecording(ServerPlayer player,BridgePacket packet) {

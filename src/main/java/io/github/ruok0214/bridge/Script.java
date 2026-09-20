@@ -12,6 +12,7 @@ public final class Script {
         var entries = new ArrayList<Entry>();
         Set<String> occupied = new HashSet<>();
         String[] lines = text.replace("\uFEFF", "").split("\\R", -1);
+        Map<String,String> palette=PaletteFormat.read(lines);
         for (int i=0; i<lines.length; i++) {
             String line = lines[i].strip();
             if (line.isEmpty() || line.startsWith("#")) continue;
@@ -25,6 +26,11 @@ public final class Script {
                 if (!occupied.add(x+","+y+","+z)) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.duplicate"));
                 String state=fields[1].strip(), nbt=fields.length==3?fields[2].strip():"";
                 if (state.isEmpty()) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.block_id"));
+                if(state.matches("\\d+")) {
+                    String resolved=palette.get(state);
+                    if(resolved==null)throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.palette_missing",state));
+                    state=resolved;
+                }
                 if (fields.length==3 && nbt.isEmpty()) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.empty_nbt"));
                 entries.add(new Entry(x,y,z,state,nbt,i+1));
             } catch (RuntimeException ex) { throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.line", i+1, ex.getMessage())); }

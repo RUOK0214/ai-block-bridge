@@ -11,6 +11,7 @@ import net.minecraft.world.level.block.state.BlockState;
 final class TickRecorder {
     static final int MAX_TICKS=6000, MAX_CHANGES=100_000;
     private final boolean ignoreHopperCooldown;
+    private final boolean paletteFormat;
     private final Region region;
     private final String initialStructure;
     private final BlockState[] previousStates;
@@ -22,17 +23,24 @@ final class TickRecorder {
     private final int maxTicks, maxChanges, maxChars;
 
     TickRecorder(ServerLevel level,Region region) {
-        this(level,region,true);
+        this(level,region,true,false);
     }
     TickRecorder(ServerLevel level,Region region,boolean ignoreHopperCooldown) {
-        this(level,region,ignoreHopperCooldown,MAX_TICKS,MAX_CHANGES,Script.MAX_TIMELINE_CHARS);
+        this(level,region,ignoreHopperCooldown,false);
+    }
+    TickRecorder(ServerLevel level,Region region,boolean ignoreHopperCooldown,boolean paletteFormat) {
+        this(level,region,ignoreHopperCooldown,paletteFormat,MAX_TICKS,MAX_CHANGES,Script.MAX_TIMELINE_CHARS);
     }
     // Bounded limits also let game tests exercise every stop condition cheaply.
     TickRecorder(ServerLevel level,Region region,boolean ignoreHopperCooldown,int maxTicks,int maxChanges,int maxChars) {
+        this(level,region,ignoreHopperCooldown,false,maxTicks,maxChanges,maxChars);
+    }
+    TickRecorder(ServerLevel level,Region region,boolean ignoreHopperCooldown,boolean paletteFormat,int maxTicks,int maxChanges,int maxChars) {
         if(maxTicks<1||maxTicks>MAX_TICKS||maxChanges<1||maxChanges>MAX_CHANGES
             ||maxChars<512||maxChars>Script.MAX_TIMELINE_CHARS)throw new IllegalArgumentException("Invalid recording limits");
         this.maxTicks=maxTicks;this.maxChanges=maxChanges;this.maxChars=maxChars;
         this.ignoreHopperCooldown=ignoreHopperCooldown;
+        this.paletteFormat=paletteFormat;
         this.region=region;
         // Both snapshots run on the server thread before another tick can advance.
         this.initialStructure=BridgeServer.exportRegion(level,region);
@@ -49,7 +57,11 @@ final class TickRecorder {
             "\n# origin: "+region.x()+" "+region.y()+" "+region.z()+
             "\n# Only changes after recording started. @tick is a server-tick offset.\n# ignore hopper TransferCooldown: "+ignoreHopperCooldown+"\n");
     }
-    RecordingBundle bundle(){return new RecordingBundle(initialStructure,result());}
+    RecordingBundle bundle(){
+        String structure=initialStructure,timeline=result();
+        if(paletteFormat){structure=PaletteFormat.encode(structure);timeline=PaletteFormat.encode(timeline);}
+        return new RecordingBundle(structure,timeline);
+    }
     void capture(ServerLevel level) {
         if(stopped)return;
         tick++;

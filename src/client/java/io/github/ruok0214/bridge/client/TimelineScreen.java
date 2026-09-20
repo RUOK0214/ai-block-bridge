@@ -11,7 +11,7 @@ import org.lwjgl.glfw.GLFW;
 /** Editor for recorded tick order. It is intentionally separate from the placement script. */
 public final class TimelineScreen extends Screen {
     private MultiLineEditBox editor;
-    private Button start,stop,load,save,copy,undo,filter,bundle;
+    private Button start,stop,load,save,copy,undo,filter,format,bundle;
     private boolean syncing;
     public TimelineScreen(){super(Messages.component(Messages.text("ai_block_bridge.timeline.title")));}
     private Button button(String title,int x,int y,int w,Runnable action) {
@@ -26,9 +26,13 @@ public final class TimelineScreen extends Screen {
         button(Messages.text("ai_block_bridge.button.script"),16+w*2,28,w,()->minecraft.gui.setScreen(new BridgeScreen()));
         button(Messages.text("ai_block_bridge.prompt.open"),20+w*3,28,w,()->minecraft.gui.setScreen(new AiPromptScreen(this)));
         button(Messages.text("ai_block_bridge.button.close"),width-66,4,58,this::onClose);
-        filter=button(filterLabel(),8,72,width-16,()->{
+        int optionWidth=(width-20)/2;
+        filter=button(filterLabel(),8,72,optionWidth,()->{
             BridgeClient.ignoreHopperCooldown=!BridgeClient.ignoreHopperCooldown;
             filter.setMessage(Messages.component(filterLabel()));
+        });
+        format=button(formatLabel(),12+optionWidth,72,optionWidth,()->{
+            BridgeClient.paletteFormat=!BridgeClient.paletteFormat;format.setMessage(Messages.component(formatLabel()));
         });
         editor=MultiLineEditBox.builder().setX(8).setY(98).setShowDecorations(true)
             .build(font,width-16,Math.max(40,height-197),Messages.component(Messages.text("ai_block_bridge.editor.timeline")));
@@ -65,12 +69,13 @@ public final class TimelineScreen extends Screen {
     }catch(Exception ex){BridgeClient.timelineStatus=Messages.text("ai_block_bridge.save_failed", ex.getMessage());}}
     @Override public void tick(){
         bundle.active=!BridgeClient.busy()&&!BridgeClient.recording&&BridgeClient.recordingBundle!=null;
-        filter.active=!BridgeClient.busy()&&!BridgeClient.recording;
+        filter.active=!BridgeClient.busy()&&!BridgeClient.recording;format.active=filter.active;
         boolean idle=!BridgeClient.busy();start.active=idle&&!BridgeClient.recording&&!BridgeClient.recordingAvailable;stop.active=idle&&(BridgeClient.recording||BridgeClient.recordingAvailable);
         stop.setMessage(Messages.component(Messages.text(BridgeClient.recordingAvailable?"ai_block_bridge.recording.retrieve":"ai_block_bridge.button.record_stop")));
         boolean editable=idle&&!BridgeClient.recording;editor.active=editable;load.active=editable;save.active=idle;copy.active=idle;undo.active=editable;
     }
     private String filterLabel(){return Messages.text("ai_block_bridge.filter", Messages.text(BridgeClient.ignoreHopperCooldown?"ai_block_bridge.on":"ai_block_bridge.off"));}
+    private String formatLabel(){return Messages.text("ai_block_bridge.format",Messages.text(BridgeClient.paletteFormat?"ai_block_bridge.format.palette":"ai_block_bridge.format.readable"));}
     @Override public boolean keyPressed(KeyEvent event){
         if(editor.isFocused()&&(event.modifiers()&(GLFW.GLFW_MOD_CONTROL|GLFW.GLFW_MOD_SUPER))!=0&&event.key()==GLFW.GLFW_KEY_Z){undoText();return true;}
         return super.keyPressed(event);

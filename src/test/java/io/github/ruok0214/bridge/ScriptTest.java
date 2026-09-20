@@ -22,5 +22,13 @@ class ScriptTest {
     @Test void rejectsEmpty(){assertThrows(IllegalArgumentException.class,()->Script.parse("# only comment",r));}
     @Test void rejectsMissingBlock(){assertThrows(IllegalArgumentException.class,()->Script.parse("0 0 0 | ",r));}
     @Test void rejectsMissingNbt(){assertThrows(IllegalArgumentException.class,()->Script.parse("0 0 0 | a | ",r));}
+    @Test void paletteRoundTripPreservesStatesAndNbt(){
+        String readable="# AI Block Bridge Script v1\n0 0 0 | minecraft:orange_concrete\n1 0 0 | minecraft:orange_concrete\n2 0 0 | minecraft:barrel[facing=up] | {CustomName:'box'}\n";
+        String coded=PaletteFormat.encode(readable);
+        assertTrue(coded.contains("# palette 0 = minecraft:orange_concrete"));
+        assertTrue(coded.contains("0 0 0 | 0"));
+        assertEquals(Script.parse(readable,r).stream().map(e->e.state()+"|"+e.nbt()).toList(),Script.parse(coded,r).stream().map(e->e.state()+"|"+e.nbt()).toList());
+    }
+    @Test void rejectsUnknownPaletteCode(){assertThrows(IllegalArgumentException.class,()->Script.parse("0 0 0 | 7",r));}
     @Test void historyIsIndependent(){var h=new TextHistory();h.remember("a");h.remember("b");assertEquals("b",h.undo("c"));assertEquals("a",h.undo("b"));assertEquals("a",h.undo("a"));}
 }
