@@ -20,6 +20,7 @@ import io.github.ruok0214.bridge.Region;
 import io.github.ruok0214.bridge.Script;
 import io.github.ruok0214.bridge.client.AiPromptScreen;
 import io.github.ruok0214.bridge.client.BridgeClient;
+import io.github.ruok0214.bridge.client.RecordingOptionsScreen;
 import io.github.ruok0214.bridge.client.RegionScreen;
 import io.github.ruok0214.bridge.client.ScriptFiles;
 import io.github.ruok0214.bridge.client.TimelineScreen;
@@ -67,7 +68,7 @@ extends Screen {
         this.button(Messages.text("ai_block_bridge.prompt.open", new Object[0]), 16 + nav * 2, 24, nav, () -> this.minecraft.gui.setScreen((Screen)new AiPromptScreen(this)));
         this.button(Messages.text("ai_block_bridge.button.help", new Object[0]), 20 + nav * 3, 24, nav, () -> this.confirm(Messages.text("ai_block_bridge.help.title", new Object[0]), Messages.text("ai_block_bridge.help.body", Region.MAX_BLOCKS_TEXT), () -> {}));
         this.button(Messages.text("ai_block_bridge.menu.area", new Object[0]), this.width - 100, 48, 92, () -> this.minecraft.gui.setScreen((Screen)new RegionScreen(this)));
-        int tools = (this.width - 24) / 3;
+        int tools = (this.width - 28) / 4;
         this.button(Messages.text("ai_block_bridge.button.capture", new Object[0]), 8, 72, tools, () -> {
             if (this.checkRegion()) {
                 this.confirm(Messages.text("ai_block_bridge.confirm.capture_title", new Object[0]), Messages.text("ai_block_bridge.confirm.capture", new Object[0]), () -> BridgeClient.send(0));
@@ -89,6 +90,7 @@ extends Screen {
             this.entities.setMessage(Messages.component(this.entityLabel()));
         });
         this.entities.setTooltip(Tooltip.create((Component)Messages.component(Messages.text("ai_block_bridge.entities.structure_hint", new Object[0]))));
+        this.button(Messages.text("ai_block_bridge.record_options.title", new Object[0]), 20 + tools * 3, 72, tools, () -> this.minecraft.gui.setScreen((Screen)new RecordingOptionsScreen(this)));
         this.editor = MultiLineEditBox.builder().setX(8).setY(104).setShowDecorations(false).build(this.font, this.width - 16, Math.max(12, this.height - 182), Messages.component(Messages.text("ai_block_bridge.editor.script", new Object[0])));
         this.editor.setCharacterLimit(2000000);
         this.editor.setValue(BridgeClient.script);
@@ -261,4 +263,3 @@ extends Screen {
         return false;
     }
 }
-
