@@ -53,7 +53,7 @@ extends Screen {
     }
 
     private Button button(String title, int x, int y, int w, Runnable action) {
-        Button b = (Button)this.addRenderableWidget((GuiEventListener)Button.builder((Component)Messages.component(title), btn -> action.run()).bounds(x, y, w, 20).build());
+        Button b = this.addRenderableWidget(Button.builder(Messages.component(title), btn -> action.run()).bounds(x, y, w, 20).build());
         this.actions.add(b);
         return b;
     }
@@ -97,7 +97,7 @@ extends Screen {
                 BridgeClient.replace(value);
             }
         });
-        this.addRenderableWidget((GuiEventListener)this.editor);
+        this.addRenderableWidget(this.editor);
         int w = (this.width - 28) / 4;
         int bottom = this.height - 48;
         this.button(Messages.text("ai_block_bridge.button.import", new Object[0]), 8, bottom, w, this::importFile);
@@ -261,5 +261,4 @@ extends Screen {
         return false;
     }
 }
-
 

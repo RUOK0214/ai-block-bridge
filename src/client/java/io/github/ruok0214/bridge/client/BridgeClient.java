@@ -163,8 +163,6 @@ implements ClientModInitializer {
                 return;
             }
             try {
-                Screen patt1$temp;
-                Screen screen;
                 if (packet.index() == 0) {
                     response = new Assembly((BridgePacket)packet);
                 }
@@ -199,13 +197,10 @@ implements ClientModInitializer {
                 pending = -1;
                 pendingAction = -1;
                 response = null;
-                Screen patt0$temp = ctx.client().gui.screen();
-                if (patt0$temp instanceof BridgeScreen) {
-                    screen = (BridgeScreen)patt0$temp;
+                if (ctx.client().gui.screen() instanceof BridgeScreen screen) {
                     screen.syncText();
                 }
-                if ((patt1$temp = ctx.client().gui.screen()) instanceof TimelineScreen) {
-                    screen = (TimelineScreen)patt1$temp;
+                if (ctx.client().gui.screen() instanceof TimelineScreen screen) {
                     screen.syncText();
                 } else if ((packet.action() == 7 || packet.action() == 9) && ctx.client().gui.screen() == null) {
                     ctx.client().gui.setScreen((Screen)new TimelineScreen());
@@ -324,4 +319,3 @@ implements ClientModInitializer {
         pendingAction = -1;
     }
 }
-

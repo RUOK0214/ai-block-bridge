@@ -36,7 +36,7 @@ extends Screen {
     }
 
     private void button(String key, int x, int y, int w, Runnable action) {
-        this.addRenderableWidget((GuiEventListener)Button.builder((Component)Messages.component(Messages.text(key, new Object[0])), b -> action.run()).bounds(x, y, w, 20).build());
+        this.addRenderableWidget(Button.builder(Messages.component(Messages.text(key, new Object[0])), b -> action.run()).bounds(x, y, w, 20).build());
     }
 
     protected void init() {
@@ -65,7 +65,7 @@ extends Screen {
                 EditBox f = new EditBox(this.font, 40 + col * (fieldWidth + 3), 52 + row * 32, fieldWidth, 20, Messages.component(Messages.text("ai_block_bridge.corner_field", row + 1, Character.valueOf("XYZ".charAt(col)))));
                 f.setMaxLength(11);
                 f.setValue(value);
-                this.fields[i] = (EditBox)this.addRenderableWidget((GuiEventListener)f);
+                this.fields[i] = this.addRenderableWidget(f);
             }
             int r = row;
             this.button("ai_block_bridge.button.position", this.width - 57, 52 + row * 32, 49, () -> {
@@ -78,7 +78,7 @@ extends Screen {
                 this.fields[r * 3 + 2].setValue("" + here.getZ());
             });
         }
-        this.apply = (Button)this.addRenderableWidget((GuiEventListener)Button.builder((Component)Messages.component(Messages.text("ai_block_bridge.button.apply", new Object[0])), b -> this.apply()).bounds(8, 128, (this.width - 20) / 2, 20).build());
+        this.apply = this.addRenderableWidget(Button.builder(Messages.component(Messages.text("ai_block_bridge.button.apply", new Object[0])), b -> this.apply()).bounds(8, 128, (this.width - 20) / 2, 20).build());
         this.button("ai_block_bridge.menu.back", 12 + (this.width - 20) / 2, 128, this.width - 20 - (this.width - 20) / 2, this::onClose);
     }
 
@@ -126,5 +126,4 @@ extends Screen {
         return false;
     }
 }
-
 

@@ -58,7 +58,7 @@ extends Screen {
     }
 
     private Button button(String title, int x, int y, int w, Runnable action) {
-        return (Button)this.addRenderableWidget((GuiEventListener)Button.builder((Component)Messages.component(title), b -> action.run()).bounds(x, y, w, 20).build());
+        return this.addRenderableWidget(Button.builder(Messages.component(title), b -> action.run()).bounds(x, y, w, 20).build());
     }
 
     protected void init() {
@@ -85,7 +85,7 @@ extends Screen {
                 BridgeClient.replaceTimeline(value);
             }
         });
-        this.addRenderableWidget((GuiEventListener)this.editor);
+        this.addRenderableWidget(this.editor);
         this.bundle = this.button(Messages.text("ai_block_bridge.bundle.save", new Object[0]), 8, this.height - 72, (this.width - 20) / 2, this::exportBundle);
         this.bundle.active = BridgeClient.recordingBundle != null;
         this.button(Messages.text("ai_block_bridge.bundle.open_folder", new Object[0]), 12 + (this.width - 20) / 2, this.height - 72, this.width - 20 - (this.width - 20) / 2, this::openRecordingFolder);
@@ -250,4 +250,3 @@ extends Screen {
     }
 
 }
-

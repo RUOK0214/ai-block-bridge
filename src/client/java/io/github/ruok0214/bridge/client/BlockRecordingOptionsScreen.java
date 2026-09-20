@@ -36,7 +36,7 @@ extends Screen {
 
     private Button toggle(String key, int y, BooleanSupplier value, Runnable change) {
         Supplier<Component> label = () -> Messages.component(Messages.text(key, Messages.text(value.getAsBoolean() ? "ai_block_bridge.on" : "ai_block_bridge.off", new Object[0])));
-        Button b = (Button)this.addRenderableWidget((GuiEventListener)Button.builder((Component)label.get(), button -> {
+        Button b = this.addRenderableWidget(Button.builder(label.get(), button -> {
             change.run();
             button.setMessage((Component)label.get());
         }).bounds(8, y, this.width - 16, 20).build());
@@ -54,7 +54,7 @@ extends Screen {
         this.palette = this.toggle("ai_block_bridge.format", 96, () -> BridgeClient.paletteFormat, () -> {
             BridgeClient.paletteFormat = !BridgeClient.paletteFormat;
         });
-        this.addRenderableWidget((GuiEventListener)Button.builder((Component)Messages.component(Messages.text("ai_block_bridge.menu.back", new Object[0])), b -> this.onClose()).bounds(8, this.height - 28, this.width - 16, 20).build());
+        this.addRenderableWidget(Button.builder(Messages.component(Messages.text("ai_block_bridge.menu.back", new Object[0])), b -> this.onClose()).bounds(8, this.height - 28, this.width - 16, 20).build());
     }
 
     public void tick() {
@@ -77,4 +77,3 @@ extends Screen {
         return false;
     }
 }
-

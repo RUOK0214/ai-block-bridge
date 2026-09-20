@@ -42,7 +42,7 @@ extends Screen {
     }
 
     private Button toggle(String key, String hint, int y, BooleanSupplier value, Runnable change) {
-        Button b = (Button)this.addRenderableWidget((GuiEventListener)Button.builder((Component)Messages.component(this.label(key, value.getAsBoolean())), button -> {
+        Button b = this.addRenderableWidget(Button.builder(Messages.component(this.label(key, value.getAsBoolean())), button -> {
             change.run();
             button.setMessage(Messages.component(this.label(key, value.getAsBoolean())));
         }).bounds(8, y, this.width - 16, 20).build());
@@ -66,8 +66,8 @@ extends Screen {
         this.ids = this.toggle("ai_block_bridge.record_options.ids", "ai_block_bridge.record_options.ids_hint", 128, () -> BridgeClient.shortEntityIds, () -> {
             BridgeClient.shortEntityIds = !BridgeClient.shortEntityIds;
         });
-        this.blocks = (Button)this.addRenderableWidget((GuiEventListener)Button.builder((Component)Messages.component(Messages.text("ai_block_bridge.record_options.blocks", new Object[0])), b -> this.minecraft.gui.setScreen((Screen)new BlockRecordingOptionsScreen(this))).bounds(8, 152, this.width - 16, 20).build());
-        this.addRenderableWidget((GuiEventListener)Button.builder((Component)Messages.component(Messages.text("ai_block_bridge.menu.back", new Object[0])), b -> this.onClose()).bounds(8, this.height - 28, this.width - 16, 20).build());
+        this.blocks = this.addRenderableWidget(Button.builder(Messages.component(Messages.text("ai_block_bridge.record_options.blocks", new Object[0])), b -> this.minecraft.gui.setScreen(new BlockRecordingOptionsScreen(this))).bounds(8, 152, this.width - 16, 20).build());
+        this.addRenderableWidget(Button.builder(Messages.component(Messages.text("ai_block_bridge.menu.back", new Object[0])), b -> this.onClose()).bounds(8, this.height - 28, this.width - 16, 20).build());
     }
 
     public void tick() {
@@ -94,5 +94,4 @@ extends Screen {
         return false;
     }
 }
-
 
