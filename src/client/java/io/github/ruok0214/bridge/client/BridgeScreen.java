@@ -1,157 +1,265 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.minecraft.client.gui.GuiGraphicsExtractor
+ *  net.minecraft.client.gui.components.Button
+ *  net.minecraft.client.gui.components.MultiLineEditBox
+ *  net.minecraft.client.gui.components.Tooltip
+ *  net.minecraft.client.gui.components.events.GuiEventListener
+ *  net.minecraft.client.gui.screens.ConfirmScreen
+ *  net.minecraft.client.gui.screens.Screen
+ *  net.minecraft.client.input.CharacterEvent
+ *  net.minecraft.client.input.KeyEvent
+ *  net.minecraft.network.chat.Component
+ */
 package io.github.ruok0214.bridge.client;
 
-import io.github.ruok0214.bridge.*;
-import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.ConfirmScreen;
-import net.minecraft.client.gui.components.*;
+import io.github.ruok0214.bridge.Messages;
+import io.github.ruok0214.bridge.Region;
+import io.github.ruok0214.bridge.Script;
+import io.github.ruok0214.bridge.client.AiPromptScreen;
+import io.github.ruok0214.bridge.client.BridgeClient;
+import io.github.ruok0214.bridge.client.RegionScreen;
+import io.github.ruok0214.bridge.client.ScriptFiles;
+import io.github.ruok0214.bridge.client.TimelineScreen;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.MultiLineEditBox;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.components.events.GuiEventListener;
+import net.minecraft.client.gui.screens.ConfirmScreen;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.CharacterEvent;
-import net.minecraft.core.BlockPos;
-import org.lwjgl.glfw.GLFW;
-import java.nio.file.*;
-import java.util.*;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.network.chat.Component;
 
-public final class BridgeScreen extends Screen {
-    private final EditBox[] coordinates=new EditBox[6];
-    private final List<Button> actions=new ArrayList<>();
+public final class BridgeScreen
+extends Screen {
+    private final List<Button> actions = new ArrayList<Button>();
     private MultiLineEditBox editor;
     private Button exportUndoButton;
-    private Button formatButton;
+    private Button entities;
+    private Button currentTab;
     private boolean syncing;
-    public BridgeScreen() { super(Messages.component("AI Block Bridge")); }
-    private Button button(String title,int x,int y,int w,Runnable action) {
-        Button b=addRenderableWidget(Button.builder(Messages.component(title),btn->action.run()).bounds(x,y,w,20).build());
-        actions.add(b);return b;
+
+    public BridgeScreen() {
+        super(Messages.component("AI Block Bridge"));
     }
-    @Override protected void init() {
-        actions.clear();
-        int fieldWidth=(width-112)/3;
-        for(int row=0;row<2;row++) {
-            BlockPos pos=row==0?BridgeClient.a:BridgeClient.b;
-            int[] xyz=pos==null?new int[]{0,0,0}:new int[]{pos.getX(),pos.getY(),pos.getZ()};
-            for(int col=0;col<3;col++) {
-                EditBox field=new EditBox(font,40+col*(fieldWidth+3),27+row*24,fieldWidth,20,Messages.component(Messages.text("ai_block_bridge.corner_field", row+1, "XYZ".charAt(col))));
-                field.setMaxLength(11);field.setValue(Integer.toString(xyz[col]));
-                coordinates[row*3+col]=addRenderableWidget(field);
+
+    private Button button(String title, int x, int y, int w, Runnable action) {
+        Button b = (Button)this.addRenderableWidget((GuiEventListener)Button.builder((Component)Messages.component(title), btn -> action.run()).bounds(x, y, w, 20).build());
+        this.actions.add(b);
+        return b;
+    }
+
+    protected void init() {
+        this.actions.clear();
+        this.button(Messages.text("ai_block_bridge.button.close", new Object[0]), this.width - 66, 4, 58, () -> ((BridgeScreen)this).onClose());
+        int nav = (this.width - 28) / 4;
+        this.currentTab = this.button(Messages.text("ai_block_bridge.menu.structure", new Object[0]), 8, 24, nav, () -> {});
+        this.button(Messages.text("ai_block_bridge.menu.timeline", new Object[0]), 12 + nav, 24, nav, () -> this.minecraft.gui.setScreen((Screen)new TimelineScreen()));
+        this.button(Messages.text("ai_block_bridge.prompt.open", new Object[0]), 16 + nav * 2, 24, nav, () -> this.minecraft.gui.setScreen((Screen)new AiPromptScreen(this)));
+        this.button(Messages.text("ai_block_bridge.button.help", new Object[0]), 20 + nav * 3, 24, nav, () -> this.confirm(Messages.text("ai_block_bridge.help.title", new Object[0]), Messages.text("ai_block_bridge.help.body", Region.MAX_BLOCKS_TEXT), () -> {}));
+        this.button(Messages.text("ai_block_bridge.menu.area", new Object[0]), this.width - 100, 48, 92, () -> this.minecraft.gui.setScreen((Screen)new RegionScreen(this)));
+        int tools = (this.width - 24) / 3;
+        this.button(Messages.text("ai_block_bridge.button.capture", new Object[0]), 8, 72, tools, () -> {
+            if (this.checkRegion()) {
+                this.confirm(Messages.text("ai_block_bridge.confirm.capture_title", new Object[0]), Messages.text("ai_block_bridge.confirm.capture", new Object[0]), () -> BridgeClient.send(0));
             }
-            int r=row;
-            button(Messages.text("ai_block_bridge.button.position"),width-57,27+row*24,49,()->{
-                if(minecraft.player==null)return;
-                BlockPos p=minecraft.player.blockPosition();
-                coordinates[r*3].setValue(""+p.getX());coordinates[r*3+1].setValue(""+p.getY());coordinates[r*3+2].setValue(""+p.getZ());
-            });
-        }
-        int toolbarWidth=(width-36)/6;
-        button(Messages.text("ai_block_bridge.button.apply"),8,78,toolbarWidth,this::applyCoordinates);
-        button(Messages.text("ai_block_bridge.button.validate"),12+toolbarWidth,78,toolbarWidth,()->{
-            try { BridgeClient.status=Messages.text("ai_block_bridge.validated", Script.parse(BridgeClient.script,BridgeClient.region()).size()); }
-            catch(Exception ex){BridgeClient.status=ex.getMessage();}
         });
-        button(Messages.text("ai_block_bridge.button.help"),16+toolbarWidth*2,78,toolbarWidth,()->confirm(Messages.text("ai_block_bridge.help.title"), Messages.text("ai_block_bridge.help.body", Region.MAX_BLOCKS_TEXT),()->{}));
-        button(Messages.text("ai_block_bridge.button.timeline"),20+toolbarWidth*3,78,toolbarWidth,()->minecraft.gui.setScreen(new TimelineScreen()));
-        button(Messages.text("ai_block_bridge.prompt.open"),24+toolbarWidth*4,78,toolbarWidth,()->minecraft.gui.setScreen(new AiPromptScreen(this)));
-        button(Messages.text("ai_block_bridge.button.close"),28+toolbarWidth*5,78,toolbarWidth,this::onClose);
-        formatButton=button(formatLabel(),8,116,width-16,()->{
-            BridgeClient.paletteFormat=!BridgeClient.paletteFormat;formatButton.setMessage(Messages.component(formatLabel()));
-        });
-        editor=MultiLineEditBox.builder().setX(8).setY(140).setShowDecorations(true)
-            .build(font,width-16,Math.max(30,height-227),Messages.component(Messages.text("ai_block_bridge.editor.script")));
-        editor.setCharacterLimit(Script.MAX_CHARS);
-        editor.setValue(BridgeClient.script);
-        editor.setValueListener(value->{if(!syncing)BridgeClient.replace(value);});
-        addRenderableWidget(editor);
-        int w=(width-28)/4, bottom=height-81;
-        button(Messages.text("ai_block_bridge.button.import"),8,bottom,w,this::importFile);
-        button(Messages.text("ai_block_bridge.button.export"),12+w,bottom,w,this::exportFile);
-        button(Messages.text("ai_block_bridge.button.copy"),16+w*2,bottom,w,()->{
-            minecraft.keyboardHandler.setClipboard(BridgeClient.script);BridgeClient.status=Messages.text("ai_block_bridge.copied");
-        });
-        button(Messages.text("ai_block_bridge.button.undo_text"),20+w*3,bottom,w,this::undoText);
-        button(Messages.text("ai_block_bridge.button.capture"),8,bottom+24,w,()->{
-            if(applyCoordinates())confirm(Messages.text("ai_block_bridge.confirm.capture_title"), Messages.text("ai_block_bridge.confirm.capture"),()->BridgeClient.send(BridgePacket.EXPORT));
-        });
-        exportUndoButton=button(Messages.text("ai_block_bridge.button.undo_capture"),12+w,bottom+24,w,()->{
-            if(BridgeClient.exportUndo==null)return;
-            confirm(Messages.text("ai_block_bridge.button.undo_capture"), Messages.text("ai_block_bridge.confirm.undo_capture"),()->{
-                BridgeClient.replace(BridgeClient.exportUndo);BridgeClient.exportUndo=null;syncText();BridgeClient.status=Messages.text("ai_block_bridge.capture_undone");
+        this.exportUndoButton = this.button(Messages.text("ai_block_bridge.button.undo_capture", new Object[0]), 12 + tools, 72, tools, () -> {
+            if (BridgeClient.exportUndo == null) {
+                return;
+            }
+            this.confirm(Messages.text("ai_block_bridge.button.undo_capture", new Object[0]), Messages.text("ai_block_bridge.confirm.undo_capture", new Object[0]), () -> {
+                BridgeClient.replace(BridgeClient.exportUndo);
+                BridgeClient.exportUndo = null;
+                this.syncText();
+                BridgeClient.status = Messages.text("ai_block_bridge.capture_undone", new Object[0]);
             });
         });
-        button(Messages.text("ai_block_bridge.button.paste"),16+w*2,bottom+24,w,()->{
+        this.entities = this.button(this.entityLabel(), 16 + tools * 2, 72, tools, () -> {
+            BridgeClient.includeStructureEntities = !BridgeClient.includeStructureEntities;
+            this.entities.setMessage(Messages.component(this.entityLabel()));
+        });
+        this.entities.setTooltip(Tooltip.create((Component)Messages.component(Messages.text("ai_block_bridge.entities.structure_hint", new Object[0]))));
+        this.editor = MultiLineEditBox.builder().setX(8).setY(104).setShowDecorations(false).build(this.font, this.width - 16, Math.max(12, this.height - 182), Messages.component(Messages.text("ai_block_bridge.editor.script", new Object[0])));
+        this.editor.setCharacterLimit(2000000);
+        this.editor.setValue(BridgeClient.script);
+        this.editor.setValueListener(value -> {
+            if (!this.syncing) {
+                BridgeClient.replace(value);
+            }
+        });
+        this.addRenderableWidget((GuiEventListener)this.editor);
+        int w = (this.width - 28) / 4;
+        int bottom = this.height - 48;
+        this.button(Messages.text("ai_block_bridge.button.import", new Object[0]), 8, bottom, w, this::importFile);
+        this.button(Messages.text("ai_block_bridge.button.export", new Object[0]), 12 + w, bottom, w, this::exportFile);
+        this.button(Messages.text("ai_block_bridge.button.copy", new Object[0]), 16 + w * 2, bottom, w, () -> {
+            this.minecraft.keyboardHandler.setClipboard(BridgeClient.script);
+            BridgeClient.status = Messages.text("ai_block_bridge.copied", new Object[0]);
+        });
+        this.button(Messages.text("ai_block_bridge.button.undo_text", new Object[0]), 20 + w * 3, bottom, w, this::undoText);
+        int world = (this.width - 24) / 3;
+        this.button(Messages.text("ai_block_bridge.button.validate", new Object[0]), 8, this.height - 72, world, () -> {
             try {
-                if(!applyCoordinates())return;
-                Region r=BridgeClient.region();
-                int count=Script.parse(BridgeClient.script,r).size();
-                confirm(Messages.text("ai_block_bridge.confirm.paste_title"),Messages.text("ai_block_bridge.confirm.paste", r.description(), count),()->BridgeClient.send(BridgePacket.PASTE));
-            }catch(Exception ex){BridgeClient.status=ex.getMessage();}
+                BridgeClient.status = Messages.text("ai_block_bridge.validated", Script.parse(BridgeClient.script, BridgeClient.region()).size());
+            }
+            catch (Exception ex) {
+                BridgeClient.status = ex.getMessage();
+            }
         });
-        button(Messages.text("ai_block_bridge.button.undo_paste"),20+w*3,bottom+24,w,()->confirm(Messages.text("ai_block_bridge.confirm.undo_title"), Messages.text("ai_block_bridge.confirm.undo"),()->BridgeClient.send(BridgePacket.UNDO)));
+        this.button(Messages.text("ai_block_bridge.button.paste", new Object[0]), 12 + world, this.height - 72, world, () -> {
+            try {
+                Region r = BridgeClient.region();
+                int count = Script.parse(BridgeClient.script, r).size();
+                this.confirm(Messages.text("ai_block_bridge.confirm.paste_title", new Object[0]), Messages.text("ai_block_bridge.confirm.paste", r.description(), count), () -> BridgeClient.send(1));
+            }
+            catch (Exception ex) {
+                BridgeClient.status = ex.getMessage();
+            }
+        });
+        this.button(Messages.text("ai_block_bridge.button.undo_paste", new Object[0]), 16 + world * 2, this.height - 72, world, () -> this.confirm(Messages.text("ai_block_bridge.confirm.undo_title", new Object[0]), Messages.text("ai_block_bridge.confirm.undo", new Object[0]), () -> BridgeClient.send(2)));
+        this.currentTab.active = false;
     }
-    private String formatLabel(){return Messages.text("ai_block_bridge.format",Messages.text(BridgeClient.paletteFormat?"ai_block_bridge.format.palette":"ai_block_bridge.format.readable"));}
-    private boolean applyCoordinates() {
+
+    private String entityLabel() {
+        return Messages.text("ai_block_bridge.entities.structure", Messages.text(BridgeClient.includeStructureEntities ? "ai_block_bridge.on" : "ai_block_bridge.off", new Object[0]));
+    }
+
+    private boolean checkRegion() {
         try {
-            int[] v=new int[6];for(int i=0;i<6;i++)v[i]=Integer.parseInt(coordinates[i].getValue());
-            Region r=Region.of(v[0],v[1],v[2],v[3],v[4],v[5]);
-            BridgeClient.a=new BlockPos(v[0],v[1],v[2]);BridgeClient.b=new BlockPos(v[3],v[4],v[5]);
-            BridgeClient.status=Messages.text("ai_block_bridge.applied", r.description());
+            BridgeClient.region();
             return true;
-        }catch(Exception ex){BridgeClient.status=Messages.text("ai_block_bridge.coordinates_failed", ex.getMessage());return false;}
-    }
-    private void confirm(String title,String message,Runnable yes) {
-        minecraft.gui.setScreen(new ConfirmScreen(accepted->{minecraft.gui.setScreen(this);if(accepted)yes.run();},Messages.component(title),Messages.component(message)));
-    }
-    public void syncText() {
-        if(editor!=null&&!editor.getValue().equals(BridgeClient.script)) {
-            syncing=true;editor.setValue(BridgeClient.script);syncing=false;
+        }
+        catch (Exception ex) {
+            BridgeClient.status = ex.getMessage();
+            return false;
         }
     }
-    private void undoText() { BridgeClient.script=BridgeClient.history.undo(BridgeClient.script);syncText(); }
+
+    private void confirm(String title, String message, Runnable yes) {
+        this.minecraft.gui.setScreen((Screen)new ConfirmScreen(accepted -> {
+            this.minecraft.gui.setScreen((Screen)this);
+            if (accepted) {
+                yes.run();
+            }
+        }, Messages.component(title), Messages.component(message)));
+    }
+
+    public void syncText() {
+        if (this.editor != null && !this.editor.getValue().equals(BridgeClient.script)) {
+            this.syncing = true;
+            this.editor.setValue(BridgeClient.script);
+            this.syncing = false;
+        }
+    }
+
+    private void undoText() {
+        BridgeClient.script = BridgeClient.history.undo(BridgeClient.script);
+        this.syncText();
+    }
+
     private void importFile() {
         try {
-            Path file=ScriptFiles.choose(false);if(file==null)return;
-            String text=ScriptFiles.read(file);
-            confirm(Messages.text("ai_block_bridge.button.import"),Messages.text("ai_block_bridge.confirm.import", file.getFileName()),()->{
-                BridgeClient.replace(text);syncText();BridgeClient.status=Messages.text("ai_block_bridge.loaded", file.getFileName());
+            Path file = ScriptFiles.choose(false);
+            if (file == null) {
+                return;
+            }
+            String text = ScriptFiles.read(file);
+            this.confirm(Messages.text("ai_block_bridge.button.import", new Object[0]), Messages.text("ai_block_bridge.confirm.import", file.getFileName()), () -> {
+                BridgeClient.replace(text);
+                this.syncText();
+                BridgeClient.status = Messages.text("ai_block_bridge.loaded", file.getFileName());
             });
-        }catch(Exception ex){BridgeClient.status=Messages.text("ai_block_bridge.load_failed", ex.getMessage());}
+        }
+        catch (Exception ex) {
+            BridgeClient.status = Messages.text("ai_block_bridge.load_failed", ex.getMessage());
+        }
     }
+
     private void exportFile() {
         try {
-            Path file=ScriptFiles.choose(true);if(file==null)return;
-            Runnable save=()->{
-                try{ScriptFiles.write(file,BridgeClient.script);BridgeClient.status=Messages.text("ai_block_bridge.saved", file.getFileName());}
-                catch(Exception ex){BridgeClient.status=Messages.text("ai_block_bridge.save_failed", ex.getMessage());}
+            Path file = ScriptFiles.choose(true);
+            if (file == null) {
+                return;
+            }
+            Runnable save = () -> {
+                try {
+                    ScriptFiles.write(file, BridgeClient.script);
+                    BridgeClient.status = Messages.text("ai_block_bridge.saved", file.getFileName());
+                }
+                catch (Exception ex) {
+                    BridgeClient.status = Messages.text("ai_block_bridge.save_failed", ex.getMessage());
+                }
             };
-            if(Files.exists(file))confirm(Messages.text("ai_block_bridge.confirm.overwrite_title"),Messages.text("ai_block_bridge.confirm.overwrite", file.getFileName()),save);else save.run();
-        }catch(Exception ex){BridgeClient.status=Messages.text("ai_block_bridge.save_failed", ex.getMessage());}
+            if (Files.exists(file, new LinkOption[0])) {
+                this.confirm(Messages.text("ai_block_bridge.confirm.overwrite_title", new Object[0]), Messages.text("ai_block_bridge.confirm.overwrite", file.getFileName()), save);
+            } else {
+                save.run();
+            }
+        }
+        catch (Exception ex) {
+            BridgeClient.status = Messages.text("ai_block_bridge.save_failed", ex.getMessage());
+        }
     }
-    @Override public void tick() {
-        boolean enabled=!BridgeClient.busy();
-        for(Button button:actions)button.active=enabled;
-        exportUndoButton.active=enabled&&BridgeClient.exportUndo!=null;
-        for(EditBox field:coordinates)field.setEditable(enabled);
-        editor.active=enabled;
+
+    public void tick() {
+        boolean enabled = !BridgeClient.busy();
+        for (Button button : this.actions) {
+            button.active = enabled;
+        }
+        this.exportUndoButton.active = enabled && BridgeClient.exportUndo != null;
+        this.currentTab.active = false;
+        this.editor.active = enabled;
     }
-    @Override public boolean keyPressed(KeyEvent event) {
-        if(editor.isFocused()) {
-            if(BridgeClient.busy()&&event.key()!=GLFW.GLFW_KEY_ESCAPE)return true;
-            if((event.modifiers()&(GLFW.GLFW_MOD_CONTROL|GLFW.GLFW_MOD_SUPER))!=0 && event.key()==GLFW.GLFW_KEY_Z) { undoText();return true; }
+
+    public boolean keyPressed(KeyEvent event) {
+        if (this.editor.isFocused()) {
+            if (BridgeClient.busy() && event.key() != 256) {
+                return true;
+            }
+            if ((event.modifiers() & 0xA) != 0 && event.key() == 90) {
+                this.undoText();
+                return true;
+            }
         }
         return super.keyPressed(event);
     }
-    @Override public boolean charTyped(CharacterEvent event) {
-        if(BridgeClient.busy())return true;
+
+    public boolean charTyped(CharacterEvent event) {
+        if (BridgeClient.busy()) {
+            return true;
+        }
         return super.charTyped(event);
     }
-    @Override public void extractRenderState(GuiGraphicsExtractor g,int mx,int my,float delta) {
-        super.extractRenderState(g,mx,my,delta);
-        g.text(font,"AI BLOCK BRIDGE · 26.2",8,7,0xFFFFFFFF,true);
-        g.text(font,"1 XYZ",8,33,0xFF9DDBFF,false);g.text(font,"2 XYZ",8,57,0xFFFFCF82,false);
+
+    public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
         String region;
-        try{region=BridgeClient.region().description();}catch(Exception ex){region=ex.getMessage();}
-        g.text(font,font.plainSubstrByWidth(Messages.display(region),width-16),8,103,0xFFCCCCCC,false);
-        g.text(font,font.plainSubstrByWidth(Messages.display(BridgeClient.status),width-16),8,height-29,0xFFFFDF8D,false);
-        g.text(font,font.plainSubstrByWidth(Messages.display(Messages.text("ai_block_bridge.editor.hint")),width-16),8,height-15,0xFFAAAAAA,false);
+        super.extractRenderState(g, mx, my, delta);
+        g.text(this.font, "AI BLOCK BRIDGE \u00b7 26.2", 8, 7, -1, true);
+        try {
+            region = BridgeClient.region().description();
+        }
+        catch (Exception ex) {
+            region = ex.getMessage();
+        }
+        g.text(this.font, this.font.plainSubstrByWidth(Messages.display(region), this.width - 116), 8, 54, -3355444, false);
+        g.text(this.font, Messages.component(Messages.text("ai_block_bridge.menu.structure_editor", new Object[0])), 8, 95, -6431745, false);
+        g.text(this.font, this.font.plainSubstrByWidth(Messages.display(BridgeClient.status), this.width - 16), 8, this.height - 22, -8307, false);
+        g.text(this.font, this.font.plainSubstrByWidth(Messages.display(Messages.text("ai_block_bridge.editor.hint", new Object[0])), this.width - 16), 8, this.height - 10, -5592406, false);
     }
-    @Override public boolean isPauseScreen(){return false;}
+
+    public boolean isPauseScreen() {
+        return false;
+    }
 }
+
+

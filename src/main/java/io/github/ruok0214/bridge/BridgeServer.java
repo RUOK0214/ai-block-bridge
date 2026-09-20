@@ -1,15 +1,54 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  com.mojang.brigadier.StringReader
+ *  net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking
+ *  net.minecraft.commands.arguments.blocks.BlockStateParser
+ *  net.minecraft.core.BlockPos
+ *  net.minecraft.core.HolderLookup
+ *  net.minecraft.core.HolderLookup$Provider
+ *  net.minecraft.core.registries.Registries
+ *  net.minecraft.nbt.CompoundTag
+ *  net.minecraft.nbt.TagParser
+ *  net.minecraft.network.protocol.common.custom.CustomPacketPayload
+ *  net.minecraft.server.MinecraftServer
+ *  net.minecraft.server.level.ServerLevel
+ *  net.minecraft.server.level.ServerPlayer
+ *  net.minecraft.server.permissions.Permissions
+ *  net.minecraft.world.level.block.Block
+ *  net.minecraft.world.level.block.EntityBlock
+ *  net.minecraft.world.level.block.entity.BlockEntity
+ *  net.minecraft.world.level.block.state.BlockState
+ *  org.slf4j.LoggerFactory
+ */
 package io.github.ruok0214.bridge;
 
-import java.util.*;
+import com.mojang.brigadier.StringReader;
+import io.github.ruok0214.bridge.Assembly;
+import io.github.ruok0214.bridge.BridgePacket;
+import io.github.ruok0214.bridge.CaptureOptions;
+import io.github.ruok0214.bridge.EntitySnapshot;
+import io.github.ruok0214.bridge.Messages;
+import io.github.ruok0214.bridge.Region;
+import io.github.ruok0214.bridge.Script;
+import io.github.ruok0214.bridge.TickRecorder;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.commands.arguments.blocks.BlockStateParser;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.TagParser;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.permissions.Permissions;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
@@ -18,206 +57,320 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.slf4j.LoggerFactory;
 
 public final class BridgeServer {
-    record Cell(BlockPos pos,BlockState state,CompoundTag nbt) {}
-    private record Undo(String dimension,List<Cell> before,List<Cell> after) {}
-    private static final Map<UUID,Assembly> incoming=new HashMap<>();
-    private static final Map<UUID,Undo> undos=new HashMap<>();
-    private static final Map<UUID,Recording> recordings=new HashMap<>();
-    private static final Map<UUID,Long> lastRequest=new HashMap<>();
-    private record Recording(String dimension,TickRecorder recorder,BridgePacket request) {}
-    public static void clear(UUID id) { incoming.remove(id);undos.remove(id);recordings.remove(id);lastRequest.remove(id); }
-    public static void clearAll() { incoming.clear();undos.clear();recordings.clear();lastRequest.clear(); }
+    private static final Map<UUID, Assembly> incoming = new HashMap<UUID, Assembly>();
+    private static final Map<UUID, Undo> undos = new HashMap<UUID, Undo>();
+    private static final Map<UUID, Recording> recordings = new HashMap<UUID, Recording>();
+    private static final Map<UUID, Long> lastRequest = new HashMap<UUID, Long>();
+
+    public static void clear(UUID id) {
+        incoming.remove(id);
+        undos.remove(id);
+        recordings.remove(id);
+        lastRequest.remove(id);
+    }
+
+    public static void clearAll() {
+        incoming.clear();
+        undos.clear();
+        recordings.clear();
+        lastRequest.clear();
+    }
+
     public static void tick(MinecraftServer server) {
-        for(var entry:recordings.entrySet()) {
-            ServerPlayer player=server.getPlayerList().getPlayer(entry.getKey());
-            Recording recording=entry.getValue();
-            if(player!=null && recording.dimension.equals(player.level().dimension().identifier().toString())) {
-                if(!recording.recorder.stopped())recording.recorder.capture(player.level());
-                String notice=recording.recorder.takeStopNotice();
-                if(notice!=null)recording.request.chunks(notice,BridgePacket.RECORD_STOPPED,p->ServerPlayNetworking.send(player,p));
+        for (Map.Entry<UUID, Recording> entry : recordings.entrySet()) {
+            String notice;
+            ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
+            Recording recording = entry.getValue();
+            if (player == null || !recording.dimension.equals(player.level().dimension().identifier().toString())) continue;
+            if (!recording.recorder.stopped()) {
+                recording.recorder.capture(player.level());
             }
+            if ((notice = recording.recorder.takeStopNotice()) == null) continue;
+            recording.request.chunks(notice, 8, p -> ServerPlayNetworking.send((ServerPlayer)player, (CustomPacketPayload)p));
         }
     }
-    public static void receive(ServerPlayer player,BridgePacket packet) {
+
+    public static void receive(ServerPlayer player, BridgePacket packet) {
         try {
-            // Full NBT can contain command blocks; use owner/operator level 4, not merely creative mode.
-            if(!player.permissions().hasPermission(Permissions.COMMANDS_OWNER))
-                throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.permission"));
-            if(packet.action()!=BridgePacket.EXPORT && packet.action()!=BridgePacket.PASTE && packet.action()!=BridgePacket.UNDO
-                && packet.action()!=BridgePacket.START_RECORD && packet.action()!=BridgePacket.STOP_RECORD)
-                throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.operation"));
-            if(!player.level().dimension().identifier().toString().equals(packet.dimension()))
-                throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.dimension"));
-            UUID id=player.getUUID();
-            if(packet.index()==0) {
-                long now=System.nanoTime();
-                if(now-lastRequest.getOrDefault(id,0L)<1_000_000_000L) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.rate_limit"));
-                lastRequest.put(id,now);
-                incoming.put(id,new Assembly(packet));
+            Assembly assembly;
+            if (!player.permissions().hasPermission(Permissions.COMMANDS_OWNER)) {
+                throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.permission", new Object[0]));
             }
-            Assembly assembly=incoming.get(id);
-            if(assembly==null) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.restart_transfer"));
-            String body=assembly.append(packet);
-            if(body==null)return;
+            if (packet.action() != 0 && packet.action() != 1 && packet.action() != 2 && packet.action() != 5 && packet.action() != 6) {
+                throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.operation", new Object[0]));
+            }
+            if (!player.level().dimension().identifier().toString().equals(packet.dimension())) {
+                throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.dimension", new Object[0]));
+            }
+            UUID id = player.getUUID();
+            if (packet.index() == 0) {
+                long now = System.nanoTime();
+                if (now - lastRequest.getOrDefault(id, 0L) < 1000000000L) {
+                    throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.rate_limit", new Object[0]));
+                }
+                lastRequest.put(id, now);
+                incoming.put(id, new Assembly(packet));
+            }
+            if ((assembly = incoming.get(id)) == null) {
+                throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.restart_transfer", new Object[0]));
+            }
+            String body = assembly.append(packet);
+            if (body == null) {
+                return;
+            }
             incoming.remove(id);
-            ServerLevel level=player.level();
-            if(packet.action()==BridgePacket.UNDO) { undo(player,packet,level);return; }
-            if(packet.action()==BridgePacket.STOP_RECORD) { stopRecording(player,packet);return; }
-            Region region=packet.region();
-            validateRegion(level,region);
-            if(packet.action()==BridgePacket.START_RECORD) { startRecording(player,packet,level,region);return; }
-            if(packet.action()==BridgePacket.EXPORT) {
-                String result=exportRegion(level,region);
-                if(packet.text().contains("palette"))result=PaletteFormat.encode(result);
-                packet.chunks(result,BridgePacket.SCRIPT,p->ServerPlayNetworking.send(player,p));
-            } else paste(player,packet,level,region,body);
-        } catch(Exception ex) {
+            ServerLevel level = player.level();
+            if (packet.action() == 2) {
+                BridgeServer.undo(player, packet, level);
+                return;
+            }
+            if (packet.action() == 6) {
+                BridgeServer.stopRecording(player, packet);
+                return;
+            }
+            Region region = packet.region();
+            BridgeServer.validateRegion(level, region);
+            if (packet.action() == 5) {
+                BridgeServer.startRecording(player, packet, level, region, body);
+                return;
+            }
+            if (packet.action() == 0) {
+                CaptureOptions options=CaptureOptions.parse(body);
+                String result = BridgeServer.exportRegion(level, region, options.structureEntities());
+                if(options.paletteFormat())result=PaletteFormat.encode(result);
+                packet.chunks(result, 4, p -> ServerPlayNetworking.send((ServerPlayer)player, (CustomPacketPayload)p));
+            } else {
+                BridgeServer.paste(player, packet, level, region, body);
+            }
+        }
+        catch (Exception ex) {
             incoming.remove(player.getUUID());
-            reply(player,packet,Messages.text("ai_block_bridge.error", safeMessage(ex)));
+            BridgeServer.reply(player, packet, Messages.text("ai_block_bridge.error", BridgeServer.safeMessage(ex)));
         }
     }
-    private static void startRecording(ServerPlayer player,BridgePacket packet,ServerLevel level,Region region) {
-        if(recordings.containsKey(player.getUUID())) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.already_recording"));
-        boolean includeCooldown=packet.text().contains("include-cooldown");
-        boolean palette=packet.text().contains("palette");
-        recordings.put(player.getUUID(),new Recording(packet.dimension(),new TickRecorder(level,region,!includeCooldown,palette),packet));
-        reply(player,packet,Messages.text("ai_block_bridge.timeline.started"));
+
+    private static void startRecording(ServerPlayer player, BridgePacket packet, ServerLevel level, Region region, String body) {
+        if (recordings.containsKey(player.getUUID())) {
+            throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.already_recording", new Object[0]));
+        }
+        CaptureOptions options = CaptureOptions.parse(body);
+        recordings.put(player.getUUID(), new Recording(packet.dimension(), new TickRecorder(level, region, options), packet));
+        BridgeServer.reply(player, packet, Messages.text("ai_block_bridge.timeline.started", new Object[0]));
     }
-    private static void stopRecording(ServerPlayer player,BridgePacket packet) {
-        Recording recording=recordings.remove(player.getUUID());
-        if(recording==null) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.not_recording"));
-        String result=recording.recorder.bundle().encode();
-        packet.chunks(result,BridgePacket.RECORDING_BUNDLE,p->ServerPlayNetworking.send(player,p));
+
+    private static void stopRecording(ServerPlayer player, BridgePacket packet) {
+        Recording recording = recordings.remove(player.getUUID());
+        if (recording == null) {
+            throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.not_recording", new Object[0]));
+        }
+        String result = recording.recorder.bundle().encode();
+        packet.chunks(result, 9, p -> ServerPlayNetworking.send((ServerPlayer)player, (CustomPacketPayload)p));
     }
+
     private static String safeMessage(Exception ex) {
-        String s=ex.getMessage()==null?ex.getClass().getSimpleName():ex.getMessage();
-        return Messages.isEncoded(s)?s:s.substring(0,Math.min(s.length(),1000));
+        String s = ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage();
+        return Messages.isEncoded(s) ? s : s.substring(0, Math.min(s.length(), 1000));
     }
-    private static void reply(ServerPlayer p,BridgePacket request,String text) {
-        request.chunks(text,BridgePacket.RESULT,msg->ServerPlayNetworking.send(p,msg));
+
+    private static void reply(ServerPlayer p, BridgePacket request, String text) {
+        request.chunks(text, 3, msg -> ServerPlayNetworking.send((ServerPlayer)p, (CustomPacketPayload)msg));
     }
-    private static void validatePosition(ServerLevel level,BlockPos pos) {
-        if(level.isOutsideBuildHeight(pos) || !level.getWorldBorder().isWithinBounds(pos))
-            throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.world_bounds"));
-        if(!level.hasChunkAt(pos)) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.unloaded"));
+
+    private static void validatePosition(ServerLevel level, BlockPos pos) {
+        if (level.isOutsideBuildHeight(pos) || !level.getWorldBorder().isWithinBounds(pos)) {
+            throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.world_bounds", new Object[0]));
+        }
+        if (!level.hasChunkAt(pos)) {
+            throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.unloaded", new Object[0]));
+        }
     }
-    static void validateRegion(ServerLevel level,Region r) {
-        // Height and the rectangular world border need only the opposite corners;
-        // chunk availability needs one check per intersecting chunk, not per block.
-        validatePosition(level,new BlockPos(r.x(),r.y(),r.z()));
-        validatePosition(level,new BlockPos(r.maxX(),r.maxY(),r.maxZ()));
-        for(int cx=r.x()>>4;cx<=(r.maxX()>>4);cx++)
-            for(int cz=r.z()>>4;cz<=(r.maxZ()>>4);cz++)
-                if(!level.hasChunkAt(new BlockPos(Math.max(r.x(),cx<<4),r.y(),Math.max(r.z(),cz<<4))))
-                    throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.unloaded"));
+
+    static void validateRegion(ServerLevel level, Region r) {
+        BridgeServer.validatePosition(level, new BlockPos(r.x(), r.y(), r.z()));
+        BridgeServer.validatePosition(level, new BlockPos(r.maxX(), r.maxY(), r.maxZ()));
+        for (int cx = r.x() >> 4; cx <= r.maxX() >> 4; ++cx) {
+            for (int cz = r.z() >> 4; cz <= r.maxZ() >> 4; ++cz) {
+                if (level.hasChunkAt(new BlockPos(Math.max(r.x(), cx << 4), r.y(), Math.max(r.z(), cz << 4)))) continue;
+                throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.unloaded", new Object[0]));
+            }
+        }
     }
-    static Cell snapshot(ServerLevel level,BlockPos pos) {
-        BlockEntity be=level.getBlockEntity(pos);
-        return new Cell(pos.immutable(),level.getBlockState(pos),be==null?null:be.saveWithFullMetadata(level.registryAccess()));
+
+    static Cell snapshot(ServerLevel level, BlockPos pos) {
+        BlockEntity be = level.getBlockEntity(pos);
+        return new Cell(pos.immutable(), level.getBlockState(pos), be == null ? null : be.saveWithFullMetadata((HolderLookup.Provider)level.registryAccess()));
     }
-    static String exportRegion(ServerLevel level,Region r) {
-        StringBuilder text=new StringBuilder("# AI Block Bridge Script v1\n# size: "+r.sizeX()+" "+r.sizeY()+" "+r.sizeZ()+
-            "\n# origin: "+r.x()+" "+r.y()+" "+r.z()+"\n# Air is omitted. Unlisted coordinates are unchanged on paste.\n");
-        for(BlockPos p:BlockPos.betweenClosed(r.x(),r.y(),r.z(),r.maxX(),r.maxY(),r.maxZ())) {
-            if(level.getBlockState(p).isAir()) continue;
-            Cell cell=snapshot(level,p);
-            if(cell.state.isAir()) continue;
-            text.append(p.getX()-r.x()).append(' ').append(p.getY()-r.y()).append(' ').append(p.getZ()-r.z())
-                .append(" | ").append(BlockStateParser.serialize(cell.state));
-            if(cell.nbt!=null) {
-                CompoundTag tag=cell.nbt.copy();tag.remove("x");tag.remove("y");tag.remove("z");
+
+    static String exportRegion(ServerLevel level, Region r) {
+        return BridgeServer.exportRegion(level, r, false);
+    }
+
+    static String exportRegion(ServerLevel level, Region r, boolean includeEntities) {
+        StringBuilder text = new StringBuilder("# AI Block Bridge Script v1\n# size: " + r.sizeX() + " " + r.sizeY() + " " + r.sizeZ() + "\n# origin: " + r.x() + " " + r.y() + " " + r.z() + "\n# Air is omitted. Unlisted coordinates are unchanged on paste.\n");
+        for (BlockPos blockPos : BlockPos.betweenClosed((int)r.x(), (int)r.y(), (int)r.z(), (int)r.maxX(), (int)r.maxY(), (int)r.maxZ())) {
+            if (level.getBlockState(blockPos).isAir()) continue;
+            Cell cell = BridgeServer.snapshot(level, blockPos);
+            if (cell.state.isAir()) continue;
+            text.append(blockPos.getX() - r.x()).append(' ').append(blockPos.getY() - r.y()).append(' ').append(blockPos.getZ() - r.z()).append(" | ").append(BlockStateParser.serialize((BlockState)cell.state));
+            if (cell.nbt != null) {
+                CompoundTag tag = cell.nbt.copy();
+                tag.remove("x");
+                tag.remove("y");
+                tag.remove("z");
                 text.append(" | ").append(tag);
             }
             text.append('\n');
-            if(text.length()>Script.MAX_CHARS) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.export_large"));
+            if (text.length() <= 2000000) continue;
+            throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.export_large", new Object[0]));
+        }
+        if (includeEntities) {
+            text.append("# include entities: true\n").append(EntitySnapshot.header());
+            if (text.length() > 2000000) {
+                throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.export_large", new Object[0]));
+            }
+            for (Map.Entry entry : EntitySnapshot.capture(level, r, 2000000).entrySet()) {
+                String line = ((EntitySnapshot.State)entry.getValue()).line("initial", (UUID)entry.getKey());
+                if ((long)text.length() + (long)line.length() > 2000000L) {
+                    throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.export_large", new Object[0]));
+                }
+                text.append(line);
+            }
         }
         return text.toString();
     }
-    static List<Cell> prepare(ServerLevel level,Region r,String body) throws Exception {
-        var cells=new ArrayList<Cell>();
-        for(Script.Entry e:Script.parse(body,r)) {
+
+    static List<Cell> prepare(ServerLevel level, Region r, String body) throws Exception {
+        ArrayList<Cell> cells = new ArrayList<Cell>();
+        for (Script.Entry e : Script.parse(body, r)) {
             try {
-                var reader=new com.mojang.brigadier.StringReader(e.state());
-                BlockState state=BlockStateParser.parseForBlock(level.registryAccess().lookupOrThrow(Registries.BLOCK),reader,false).blockState();
+                StringReader reader = new StringReader(e.state());
+                BlockState state = BlockStateParser.parseForBlock((HolderLookup)level.registryAccess().lookupOrThrow(Registries.BLOCK), (StringReader)reader, (boolean)false).blockState();
                 reader.skipWhitespace();
-                if(reader.canRead())throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.trailing_state"));
-                BlockPos pos=new BlockPos(r.x()+e.x(),r.y()+e.y(),r.z()+e.z());
-                CompoundTag tag=null;
-                if(!e.nbt().isEmpty()) {
-                    if(!(state.getBlock() instanceof EntityBlock eb)) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.unsupported_nbt"));
-                    BlockEntity prototype=eb.newBlockEntity(pos,state);
-                    if(prototype==null) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.block_entity_create"));
-                    tag=TagParser.parseCompoundFully(e.nbt());
-                    CompoundTag metadata=prototype.saveWithFullMetadata(level.registryAccess());
-                    tag.put("id",metadata.get("id"));
-                    tag.putInt("x",pos.getX());tag.putInt("y",pos.getY());tag.putInt("z",pos.getZ());
-                    if(BlockEntity.loadStatic(pos,state,tag,level.registryAccess())==null) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.nbt_load"));
+                if (reader.canRead()) {
+                    throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.trailing_state", new Object[0]));
                 }
-                cells.add(new Cell(pos,state,tag));
-            } catch(Exception ex) { throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.line", e.line(), safeMessage(ex))); }
+                BlockPos pos = new BlockPos(r.x() + e.x(), r.y() + e.y(), r.z() + e.z());
+                CompoundTag tag = null;
+                if (!e.nbt().isEmpty()) {
+                    Block block = state.getBlock();
+                    if (!(block instanceof EntityBlock)) {
+                        throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.unsupported_nbt", new Object[0]));
+                    }
+                    EntityBlock eb = (EntityBlock)block;
+                    BlockEntity prototype = eb.newBlockEntity(pos, state);
+                    if (prototype == null) {
+                        throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.block_entity_create", new Object[0]));
+                    }
+                    tag = TagParser.parseCompoundFully((String)e.nbt());
+                    CompoundTag metadata = prototype.saveWithFullMetadata((HolderLookup.Provider)level.registryAccess());
+                    tag.put("id", metadata.get("id"));
+                    tag.putInt("x", pos.getX());
+                    tag.putInt("y", pos.getY());
+                    tag.putInt("z", pos.getZ());
+                    if (BlockEntity.loadStatic((BlockPos)pos, (BlockState)state, (CompoundTag)tag, (HolderLookup.Provider)level.registryAccess()) == null) {
+                        throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.nbt_load", new Object[0]));
+                    }
+                }
+                cells.add(new Cell(pos, state, tag));
+            }
+            catch (Exception ex) {
+                throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.line", e.line(), BridgeServer.safeMessage(ex)));
+            }
         }
         return cells;
     }
-    private static void paste(ServerPlayer p,BridgePacket packet,ServerLevel level,Region r,String body) throws Exception {
-        List<Cell> target=prepare(level,r,body);
-        List<Cell> before=target.stream().map(c->snapshot(level,c.pos)).toList();
-        checkSnapshotSize(before);
+
+    private static void paste(ServerPlayer p, BridgePacket packet, ServerLevel level, Region r, String body) throws Exception {
         List<Cell> after;
+        List<Cell> target = BridgeServer.prepare(level, r, body);
+        List<Cell> before = target.stream().map(c -> BridgeServer.snapshot(level, c.pos)).toList();
+        BridgeServer.checkSnapshotSize(before);
         try {
-            apply(level,target);
-            after=target.stream().map(c->snapshot(level,c.pos)).toList();
-            checkSnapshotSize(after);
+            BridgeServer.apply(level, target);
+            after = target.stream().map(c -> BridgeServer.snapshot(level, c.pos)).toList();
+            BridgeServer.checkSnapshotSize(after);
         }
-        catch(Exception ex) {
-            try { apply(level,before); }
-            catch(Exception rollback) {
-                undos.put(p.getUUID(),new Undo(packet.dimension(),before,null));
-                LoggerFactory.getLogger("ai_block_bridge").error("Rollback failed; retained recovery snapshot",rollback);
-                throw new IllegalStateException(Messages.text("ai_block_bridge.error.rollback"),ex);
+        catch (Exception ex) {
+            try {
+                BridgeServer.apply(level, before);
             }
-            throw new IllegalStateException(Messages.text("ai_block_bridge.error.paste_restored", safeMessage(ex)));
+            catch (Exception rollback) {
+                undos.put(p.getUUID(), new Undo(packet.dimension(), before, null));
+                LoggerFactory.getLogger((String)"ai_block_bridge").error("Rollback failed; retained recovery snapshot", (Throwable)rollback);
+                throw new IllegalStateException(Messages.text("ai_block_bridge.error.rollback", new Object[0]), ex);
+            }
+            throw new IllegalStateException(Messages.text("ai_block_bridge.error.paste_restored", BridgeServer.safeMessage(ex)));
         }
-        undos.put(p.getUUID(),new Undo(packet.dimension(),before,after));
-        reply(p,packet,Messages.text("ai_block_bridge.pasted", target.size()));
+        undos.put(p.getUUID(), new Undo(packet.dimension(), before, after));
+        BridgeServer.reply(p, packet, Messages.text("ai_block_bridge.pasted", target.size()));
     }
+
     private static void checkSnapshotSize(List<Cell> cells) {
-        long count=0;
-        for(Cell c:cells) {
-            count+=c.nbt==null?0:c.nbt.toString().length();
-            if(count>Script.MAX_CHARS) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.undo_large"));
+        long count = 0L;
+        for (Cell c : cells) {
+            if ((count += c.nbt == null ? 0L : (long)c.nbt.toString().length()) <= 2000000L) continue;
+            throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.undo_large", new Object[0]));
         }
     }
-    static void apply(ServerLevel level,List<Cell> cells) {
-        // Suppress drops and shape/neighbor updates during bulk editing. Do not clear a container into the world.
-        int flags=Block.UPDATE_CLIENTS|Block.UPDATE_KNOWN_SHAPE|Block.UPDATE_SUPPRESS_DROPS
-            |Block.UPDATE_SKIP_ON_PLACE|Block.UPDATE_SKIP_BLOCK_ENTITY_SIDEEFFECTS;
-        for(Cell c:cells) {
+
+    static void apply(ServerLevel level, List<Cell> cells) {
+        int flags = 818;
+        for (Cell c : cells) {
             level.removeBlockEntity(c.pos);
-            level.setBlock(c.pos,c.state,flags);
-            if(!level.getBlockState(c.pos).equals(c.state)) throw new IllegalStateException(Messages.text("ai_block_bridge.error.place", c.pos));
-            if(c.state.getBlock() instanceof EntityBlock eb) {
-                BlockEntity be=c.nbt==null?eb.newBlockEntity(c.pos,c.state):BlockEntity.loadStatic(c.pos,c.state,c.nbt.copy(),level.registryAccess());
-                if(be==null) throw new IllegalStateException(Messages.text("ai_block_bridge.error.block_entity_restore", c.pos));
-                level.setBlockEntity(be);level.blockEntityChanged(c.pos);
+            level.setBlock(c.pos, c.state, flags);
+            if (!level.getBlockState(c.pos).equals((Object)c.state)) {
+                throw new IllegalStateException(Messages.text("ai_block_bridge.error.place", c.pos));
             }
-            level.sendBlockUpdated(c.pos,c.state,c.state,Block.UPDATE_CLIENTS);
+            Block block = c.state.getBlock();
+            if (block instanceof EntityBlock) {
+                BlockEntity be;
+                EntityBlock eb = (EntityBlock)block;
+                BlockEntity blockEntity = be = c.nbt == null ? eb.newBlockEntity(c.pos, c.state) : BlockEntity.loadStatic((BlockPos)c.pos, (BlockState)c.state, (CompoundTag)c.nbt.copy(), (HolderLookup.Provider)level.registryAccess());
+                if (be == null) {
+                    throw new IllegalStateException(Messages.text("ai_block_bridge.error.block_entity_restore", c.pos));
+                }
+                level.setBlockEntity(be);
+                level.blockEntityChanged(c.pos);
+            }
+            level.sendBlockUpdated(c.pos, c.state, c.state, 2);
         }
     }
-    private static void undo(ServerPlayer player,BridgePacket packet,ServerLevel level) {
-        Undo undo=undos.get(player.getUUID());
-        if(undo==null) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.no_undo"));
-        if(!undo.dimension.equals(packet.dimension())) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.undo_dimension"));
-        for(Cell c:undo.before) validatePosition(level,c.pos);
-        if(undo.after!=null) for(Cell expected:undo.after) {
-            if(!snapshot(level,expected.pos).equals(expected))
-                throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.undo_changed"));
+
+    private static void undo(ServerPlayer player, BridgePacket packet, ServerLevel level) {
+        Undo undo = undos.get(player.getUUID());
+        if (undo == null) {
+            throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.no_undo", new Object[0]));
         }
-        try { apply(level,undo.before); }
-        catch(Exception ex) {
-            undos.put(player.getUUID(),new Undo(undo.dimension,undo.before,null));
-            throw new IllegalStateException(Messages.text("ai_block_bridge.error.undo_retry", safeMessage(ex)));
+        if (!undo.dimension.equals(packet.dimension())) {
+            throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.undo_dimension", new Object[0]));
+        }
+        for (Cell c : undo.before) {
+            BridgeServer.validatePosition(level, c.pos);
+        }
+        if (undo.after != null) {
+            for (Cell expected : undo.after) {
+                if (BridgeServer.snapshot(level, expected.pos).equals(expected)) continue;
+                throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.undo_changed", new Object[0]));
+            }
+        }
+        try {
+            BridgeServer.apply(level, undo.before);
+        }
+        catch (Exception ex) {
+            undos.put(player.getUUID(), new Undo(undo.dimension, undo.before, null));
+            throw new IllegalStateException(Messages.text("ai_block_bridge.error.undo_retry", BridgeServer.safeMessage(ex)));
         }
         undos.remove(player.getUUID());
-        reply(player,packet,Messages.text("ai_block_bridge.undone", undo.before.size()));
+        BridgeServer.reply(player, packet, Messages.text("ai_block_bridge.undone", undo.before.size()));
+    }
+
+    private record Recording(String dimension, TickRecorder recorder, BridgePacket request) {
+    }
+
+    record Cell(BlockPos pos, BlockState state, CompoundTag nbt) {
+    }
+
+    private record Undo(String dimension, List<Cell> before, List<Cell> after) {
     }
 }
+
