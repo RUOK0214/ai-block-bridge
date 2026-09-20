@@ -47,7 +47,7 @@ final class EntitySnapshot {
     }
 
     static Map<UUID, State> capture(ServerLevel level, Region r, int maxChars, boolean ignoreAgeMotion) {
-        List entities = level.getEntities((Entity)null, new AABB((double)r.x(), (double)r.y(), (double)r.z(), (double)r.maxX() + 1.0, (double)r.maxY() + 1.0, (double)r.maxZ() + 1.0), e -> !(e instanceof Player) && !e.isRemoved() && e.getX() >= (double)r.x() && e.getX() < (double)r.maxX() + 1.0 && e.getY() >= (double)r.y() && e.getY() < (double)r.maxY() + 1.0 && e.getZ() >= (double)r.z() && e.getZ() < (double)r.maxZ() + 1.0);
+        List<Entity> entities = level.getEntities((Entity)null, new AABB((double)r.x(), (double)r.y(), (double)r.z(), (double)r.maxX() + 1.0, (double)r.maxY() + 1.0, (double)r.maxZ() + 1.0), e -> !(e instanceof Player) && !e.isRemoved() && e.getX() >= (double)r.x() && e.getX() < (double)r.maxX() + 1.0 && e.getY() >= (double)r.y() && e.getY() < (double)r.maxY() + 1.0 && e.getZ() >= (double)r.z() && e.getZ() < (double)r.maxZ() + 1.0);
         if (entities.size() > 4096) {
             throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.entity_limit", 4096));
         }
@@ -84,4 +84,3 @@ final class EntitySnapshot {
         }
     }
 }
-
