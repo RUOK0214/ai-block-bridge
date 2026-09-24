@@ -18,5 +18,12 @@ public record Region(int x, int y, int z, int maxX, int maxY, int maxZ) {
     public int sizeZ() { return maxZ-z+1; }
     public int volume() { return sizeX()*sizeY()*sizeZ(); }
     public boolean containsLocal(int lx, int ly, int lz) { return lx>=0 && ly>=0 && lz>=0 && lx<sizeX() && ly<sizeY() && lz<sizeZ(); }
+    /** Same size, with local 0 0 0 sitting at the given world position. */
+    public Region movedTo(int nx, int ny, int nz) {
+        long ex=(long)nx+sizeX()-1, ey=(long)ny+sizeY()-1, ez=(long)nz+sizeZ()-1;
+        if (ex>Integer.MAX_VALUE || ey>Integer.MAX_VALUE || ez>Integer.MAX_VALUE)
+            throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.region"));
+        return new Region(nx, ny, nz, (int)ex, (int)ey, (int)ez);
+    }
     public String description() { return Messages.text("ai_block_bridge.region", x, y, z, sizeX(), sizeY(), sizeZ(), volume()); }
 }

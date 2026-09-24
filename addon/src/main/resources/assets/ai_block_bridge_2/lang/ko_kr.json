@@ -1,0 +1,11 @@
+{
+  "ai_block_bridge_2.watch.confirm": "'%s' 월드에서 자동화를 켜려 합니다. 요청이 블록을 지우고 배치하며, 틱 속도를 올리면 이 서버 전체가 빨라집니다. 테스트 전용 월드가 맞다면 /abb2 watch confirm 을 입력하세요.",
+  "ai_block_bridge_2.watch.expired": "확인 시간이 지났습니다. /abb2 watch on 부터 다시 입력하세요.",
+  "ai_block_bridge_2.watch.nothing_pending": "켜려던 요청이 없습니다. 먼저 /abb2 watch on 을 입력하세요.",
+  "ai_block_bridge_2.watch.enabled": "'%s' 월드에서 감시를 켰습니다: %s",
+  "ai_block_bridge_2.watch.disabled": "감시를 껐습니다.",
+  "ai_block_bridge_2.watch.status_on": "감시 중: %s",
+  "ai_block_bridge_2.watch.status_off": "감시하지 않는 중입니다.",
+  "ai_block_bridge_2.watch.no_server": "서버가 없습니다.",
+  "ai_block_bridge_2.watch.failed": "실패했습니다: %s"
+}

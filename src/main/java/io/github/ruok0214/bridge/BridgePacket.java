@@ -11,9 +11,11 @@ public record BridgePacket(int request, int action, int index, int total, String
     public static final int EXPORT=0, PASTE=1, UNDO=2, RESULT=3, SCRIPT=4;
     public static final int START_RECORD=5, STOP_RECORD=6, TIMELINE=7;
     public static final int RECORD_STOPPED=8, RECORDING_BUNDLE=9;
+    public static final int SETTLE=10, SETTLE_REPORT=11;
+    public static final int RUN_TEST=12, TEST_REPORT=13;
     // UTF-8 can take 3 bytes per UTF-16 code unit. Leave room for metadata within 32 KiB C2S.
     public static final int CHUNK=7000, MAX_CHUNKS=RecordingBundle.MAX_CHARS/(CHUNK-1)+1;
-    public static int textLimit(int action) { return action==RECORDING_BUNDLE?RecordingBundle.MAX_CHARS:action==TIMELINE?Script.MAX_TIMELINE_CHARS:Script.MAX_CHARS; }
+    public static int textLimit(int action) { return action==RECORDING_BUNDLE?RecordingBundle.MAX_CHARS:action==TIMELINE?Script.MAX_TIMELINE_CHARS:action==RUN_TEST?TestScript.MAX_CHARS:Script.MAX_CHARS; }
     public static final Type<BridgePacket> TYPE = new Type<>(Identifier.fromNamespaceAndPath("ai_block_bridge","message"));
     public static final StreamCodec<RegistryFriendlyByteBuf,BridgePacket> CODEC = new StreamCodec<>() {
         public BridgePacket decode(RegistryFriendlyByteBuf b) {

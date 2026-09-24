@@ -8,10 +8,13 @@
       "io.github.ruok0214.bridge.BridgeGameTests",
       "io.github.ruok0214.bridge.CompactDisplayGameTests",
       "io.github.ruok0214.bridge.AccumulatorGameTests",
-      "io.github.ruok0214.bridge.QuizBuzzerGameTests"
+      "io.github.ruok0214.bridge.QuizBuzzerGameTests",
+      "io.github.ruok0214.bridge.SettleGameTests",
+      "io.github.ruok0214.bridge.TestRunnerGameTests"
     ],
     "fabric-client-gametest": [
-      "io.github.ruok0214.bridge.SelectionClientTest"
+      "io.github.ruok0214.bridge.SelectionClientTest",
+      "io.github.ruok0214.bridge.RoundTripClientTest"
     ]
   }
 }

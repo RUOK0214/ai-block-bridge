@@ -44,6 +44,24 @@ public final class Messages {
             : value != null && value.startsWith("오류:");
     }
 
+    /** Line number reported by a syntax error, or 0. Server replies nest it inside a generic error. */
+    public static int lineNumber(String value) { return lineNumber(value, 0); }
+
+    private static int lineNumber(String value, int depth) {
+        JsonObject message = depth < 8 ? parse(value) : null;
+        if (message == null) return 0;
+        JsonArray args = message.getAsJsonArray("args");
+        if (message.get("key").getAsString().equals(NAMESPACE + "error.line") && !args.isEmpty()) {
+            try { return Integer.parseInt(args.get(0).getAsString()); }
+            catch (NumberFormatException ex) { return 0; }
+        }
+        for (var arg : args) {
+            int nested = lineNumber(arg.getAsString(), depth + 1);
+            if (nested > 0) return nested;
+        }
+        return 0;
+    }
+
     public static Component component(String value) { return component(value, 0); }
 
     private static Component component(String value, int depth) {

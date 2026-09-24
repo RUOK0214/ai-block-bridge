@@ -13,6 +13,7 @@ public final class Script {
         Set<String> occupied = new HashSet<>();
         String[] lines = text.replace("\uFEFF", "").split("\\R", -1);
         Map<String,String> palette=PaletteFormat.read(lines);
+        Map<String,String> nbtValues=PaletteFormat.readNbt(lines);
         for (int i=0; i<lines.length; i++) {
             String line = lines[i].strip();
             if (line.isEmpty() || line.startsWith("#")) continue;
@@ -32,6 +33,7 @@ public final class Script {
                     state=resolved;
                 }
                 if (fields.length==3 && nbt.isEmpty()) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.empty_nbt"));
+                if (!nbt.isEmpty()) nbt=PaletteFormat.expand(nbt,nbtValues);
                 entries.add(new Entry(x,y,z,state,nbt,i+1));
             } catch (RuntimeException ex) { throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.line", i+1, ex.getMessage())); }
         }

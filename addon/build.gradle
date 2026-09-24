@@ -1,0 +1,30 @@
+plugins { id 'net.fabricmc.fabric-loom' version "${loom_version}" }
+version = rootProject.version
+group = rootProject.group
+base { archivesName = 'ai-block-bridge-2' }
+repositories { mavenCentral() }
+dependencies {
+    minecraft "com.mojang:minecraft:${minecraft_version}"
+    implementation "net.fabricmc:fabric-loader:${loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
+    implementation project(':')
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.12.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+processResources {
+    from(rootProject.projectDir) { include 'LICENSE', 'NOTICE', 'licenses/CC0-1.0.txt' }
+    inputs.property 'version', project.version
+    filesMatching('fabric.mod.json') {
+        expand(['version': project.version]) { escapeBackslash = true }
+    }
+}
+tasks.withType(JavaCompile).configureEach { options.release = 25; options.encoding = 'UTF-8' }
+java { sourceCompatibility = JavaVersion.VERSION_25; targetCompatibility = JavaVersion.VERSION_25 }
+test { useJUnitPlatform() }
+fabricApi {
+    configureTests {
+        createSourceSet = true
+        modId = 'ai_block_bridge_2_test'
+        enableGameTests = true
+    }
+}

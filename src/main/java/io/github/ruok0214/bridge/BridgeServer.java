@@ -60,12 +60,18 @@ public final class BridgeServer {
     private static final Map<UUID, Assembly> incoming = new HashMap<UUID, Assembly>();
     private static final Map<UUID, Undo> undos = new HashMap<UUID, Undo>();
     private static final Map<UUID, Recording> recordings = new HashMap<UUID, Recording>();
+    private static final Map<UUID, Settle> settles = new HashMap<UUID, Settle>();
+    private static final Map<UUID, TestRun> tests = new HashMap<UUID, TestRun>();
     private static final Map<UUID, Long> lastRequest = new HashMap<UUID, Long>();
+    /** Repeaters and comparators need a few ticks before the circuit stops changing. */
+    static final int SETTLE_TICKS = 10;
 
     public static void clear(UUID id) {
         incoming.remove(id);
         undos.remove(id);
         recordings.remove(id);
+        settles.remove(id);
+        tests.remove(id);
         lastRequest.remove(id);
     }
 
@@ -73,6 +79,8 @@ public final class BridgeServer {
         incoming.clear();
         undos.clear();
         recordings.clear();
+        settles.clear();
+        tests.clear();
         lastRequest.clear();
     }
 
@@ -88,6 +96,67 @@ public final class BridgeServer {
             if ((notice = recording.recorder.takeStopNotice()) == null) continue;
             recording.request.chunks(notice, 8, p -> ServerPlayNetworking.send((ServerPlayer)player, (CustomPacketPayload)p));
         }
+        BridgeServer.tickSettles(server);
+        BridgeServer.tickTests(server);
+    }
+
+    private static void tickTests(MinecraftServer server) {
+        for (Map.Entry<UUID, TestRun> entry : List.copyOf(tests.entrySet())) {
+            ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
+            TestRun run = entry.getValue();
+            if (player == null || !run.dimension.equals(player.level().dimension().identifier().toString())) {
+                tests.remove(entry.getKey());
+                continue;
+            }
+            try {
+                run.runner.tick(player.level());
+            }
+            catch (Exception ex) {
+                run.runner.stop(BridgeServer.safeMessage(ex));
+            }
+            if (!run.runner.done()) continue;
+            tests.remove(entry.getKey());
+            run.request.chunks(run.runner.report(), BridgePacket.TEST_REPORT, p -> ServerPlayNetworking.send((ServerPlayer)player, (CustomPacketPayload)p));
+        }
+    }
+
+    private static void tickSettles(MinecraftServer server) {
+        for (Map.Entry<UUID, Settle> entry : List.copyOf(settles.entrySet())) {
+            ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
+            Settle settle = entry.getValue();
+            if (player == null || !settle.dimension.equals(player.level().dimension().identifier().toString())) {
+                settles.remove(entry.getKey());
+                continue;
+            }
+            if (--settle.remaining > 0) continue;
+            settles.remove(entry.getKey());
+            try {
+                BridgeServer.report(player, settle);
+            }
+            catch (Exception ex) {
+                BridgeServer.reply(player, settle.request, Messages.text("ai_block_bridge.error", BridgeServer.safeMessage(ex)));
+            }
+        }
+    }
+
+    private static void report(ServerPlayer player, Settle settle) {
+        ServerLevel level = player.level();
+        SettleReport.Rows rows = new SettleReport.Rows();
+        for (Cell cell : settle.target) {
+            BlockState actual = level.getBlockState(cell.pos);
+            if (actual.equals((Object)cell.state)) continue;
+            rows.add(new SettleReport.Row(cell.pos.getX() - settle.region.x(), cell.pos.getY() - settle.region.y(),
+                cell.pos.getZ() - settle.region.z(), BlockStateParser.serialize((BlockState)cell.state),
+                BlockStateParser.serialize((BlockState)actual)));
+        }
+        // Settling moved the world past the snapshot taken at paste time, which undo verifies against.
+        Undo undo = undos.get(player.getUUID());
+        if (undo != null && undo.after != null && undo.dimension.equals(settle.dimension)) {
+            undos.put(player.getUUID(), new Undo(undo.dimension, undo.before,
+                undo.before.stream().map(c -> BridgeServer.snapshot(level, c.pos)).toList()));
+        }
+        String text = SettleReport.render(settle.region, SETTLE_TICKS, settle.target.size(), rows);
+        settle.request.chunks(text, BridgePacket.SETTLE_REPORT, p -> ServerPlayNetworking.send((ServerPlayer)player, (CustomPacketPayload)p));
     }
 
     public static void receive(ServerPlayer player, BridgePacket packet) {
@@ -96,7 +165,7 @@ public final class BridgeServer {
             if (!player.permissions().hasPermission(Permissions.COMMANDS_OWNER)) {
                 throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.permission", new Object[0]));
             }
-            if (packet.action() != 0 && packet.action() != 1 && packet.action() != 2 && packet.action() != 5 && packet.action() != 6) {
+            if (packet.action() != 0 && packet.action() != 1 && packet.action() != 2 && packet.action() != 5 && packet.action() != 6 && packet.action() != BridgePacket.SETTLE && packet.action() != BridgePacket.RUN_TEST) {
                 throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.operation", new Object[0]));
             }
             if (!player.level().dimension().identifier().toString().equals(packet.dimension())) {
@@ -134,6 +203,14 @@ public final class BridgeServer {
                 BridgeServer.startRecording(player, packet, level, region, body);
                 return;
             }
+            if (packet.action() == BridgePacket.SETTLE) {
+                BridgeServer.settle(player, packet, level, region, body);
+                return;
+            }
+            if (packet.action() == BridgePacket.RUN_TEST) {
+                BridgeServer.startTest(player, packet, level, region, body);
+                return;
+            }
             if (packet.action() == 0) {
                 CaptureOptions options=CaptureOptions.parse(body);
                 String result = BridgeServer.exportRegion(level, region, options.structureEntities());
@@ -156,6 +233,38 @@ public final class BridgeServer {
         CaptureOptions options = CaptureOptions.parse(body);
         recordings.put(player.getUUID(), new Recording(packet.dimension(), new TickRecorder(level, region, options), packet));
         BridgeServer.reply(player, packet, Messages.text("ai_block_bridge.timeline.started", new Object[0]));
+    }
+
+    /** Lets the world recompute wire connections, power and support that a script had to spell out by hand. */
+    static void runUpdates(ServerLevel level, List<Cell> cells) {
+        // Shape updates fix connection properties; block updates drive power and support checks.
+        for (Cell cell : cells) {
+            level.getBlockState(cell.pos).updateNeighbourShapes(level, cell.pos, Block.UPDATE_ALL);
+        }
+        for (Cell cell : cells) {
+            level.updateNeighborsAt(cell.pos, level.getBlockState(cell.pos).getBlock());
+        }
+        // A block only pops on its own neighbour update, so one with nothing pasted beside it
+        // would otherwise survive without support.
+        for (Cell cell : cells) {
+            BlockState state = level.getBlockState(cell.pos);
+            if (state.isAir() || state.canSurvive(level, cell.pos)) continue;
+            level.destroyBlock(cell.pos, true, null, 512);
+        }
+    }
+
+    private static void settle(ServerPlayer player, BridgePacket packet, ServerLevel level, Region region, String body) throws Exception {
+        List<Cell> target = BridgeServer.prepare(level, region, body);
+        BridgeServer.runUpdates(level, target);
+        settles.put(player.getUUID(), new Settle(packet.dimension(), region, target, packet, SETTLE_TICKS));
+    }
+
+    private static void startTest(ServerPlayer player, BridgePacket packet, ServerLevel level, Region region, String body) {
+        if (tests.containsKey(player.getUUID())) {
+            throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.test_running", new Object[0]));
+        }
+        TestRunner runner = new TestRunner(level, region, TestScript.parse(body, region));
+        tests.put(player.getUUID(), new TestRun(packet.dimension(), runner, packet));
     }
 
     private static void stopRecording(ServerPlayer player, BridgePacket packet) {
@@ -367,10 +476,28 @@ public final class BridgeServer {
     private record Recording(String dimension, TickRecorder recorder, BridgePacket request) {
     }
 
+    private record TestRun(String dimension, TestRunner runner, BridgePacket request) {
+    }
+
+    private static final class Settle {
+        final String dimension;
+        final Region region;
+        final List<Cell> target;
+        final BridgePacket request;
+        int remaining;
+
+        Settle(String dimension, Region region, List<Cell> target, BridgePacket request, int remaining) {
+            this.dimension = dimension;
+            this.region = region;
+            this.target = target;
+            this.request = request;
+            this.remaining = remaining;
+        }
+    }
+
     record Cell(BlockPos pos, BlockState state, CompoundTag nbt) {
     }
 
     private record Undo(String dimension, List<Cell> before, List<Cell> after) {
     }
 }
-

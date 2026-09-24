@@ -32,6 +32,7 @@ public final class AiPromptScreen extends Screen {
         return Messages.display(Messages.text("ai_block_bridge.prompt.context", version, region)) + "\n\n"
             + Messages.display(Messages.text("ai_block_bridge.prompt." + mode)) + "\n\n"
             + Messages.display(Messages.text("ai_block_bridge.prompt.format", Region.MAX_BLOCKS_TEXT)) + "\n\n"
+            + Messages.display(Messages.text("ai_block_bridge.prompt.testing")) + "\n\n"
             + Messages.display(Messages.text("ai_block_bridge.prompt.attach"));
     }
 

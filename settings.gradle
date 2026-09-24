@@ -11,3 +11,6 @@ pluginManagement {
 
 // Should match your modid
 rootProject.name = 'ai-block-bridge'
+
+// Automation add-on. Ships as its own jar so the base mod keeps its offline guarantees.
+include 'addon'

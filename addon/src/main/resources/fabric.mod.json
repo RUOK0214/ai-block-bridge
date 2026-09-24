@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "ai_block_bridge_2",
+  "version": "${version}",
+  "name": "AI Block Bridge 2",
+  "description": "Drives AI Block Bridge from a watched folder so an agent can place, settle and test circuits in vanilla Minecraft without a separate simulator. Installing this mod enables automation that the base mod deliberately leaves out.",
+  "authors": ["RUOK0214"],
+  "contact": { "sources": "https://github.com/RUOK0214/ai-block-bridge" },
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["io.github.ruok0214.bridge.addon.AddonMod"]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "~26.2",
+    "java": ">=25",
+    "ai_block_bridge": ">=0.2.0",
+    "fabric-api": "*"
+  }
+}

@@ -30,5 +30,21 @@ class ScriptTest {
         assertEquals(Script.parse(readable,r).stream().map(e->e.state()+"|"+e.nbt()).toList(),Script.parse(coded,r).stream().map(e->e.state()+"|"+e.nbt()).toList());
     }
     @Test void rejectsUnknownPaletteCode(){assertThrows(IllegalArgumentException.class,()->Script.parse("0 0 0 | 7",r));}
+    @Test void movedRegionKeepsItsSizeAndPutsOriginOnTarget(){
+        var moved=Region.of(9,-3,8,7,-1,9).movedTo(100,64,-200);
+        assertEquals(new Region(100,64,-200,102,66,-199),moved);
+        assertEquals(18,moved.volume());
+        assertEquals(3,moved.sizeX());assertEquals(3,moved.sizeY());assertEquals(2,moved.sizeZ());
+    }
+    @Test void movingASingleBlockRegionLandsExactlyOnTheTarget(){
+        assertEquals(new Region(5,6,7,5,6,7),Region.of(-1,-1,-1,-1,-1,-1).movedTo(5,6,7));
+    }
+    @Test void movingIsIdempotentAtTheSamePlace(){
+        var r=Region.of(1,2,12,13,7,20);
+        assertEquals(r,r.movedTo(r.x(),r.y(),r.z()));
+    }
+    @Test void movingPastTheWorldIntegerRangeIsRejected(){
+        assertThrows(IllegalArgumentException.class,()->Region.of(0,0,0,5,0,0).movedTo(Integer.MAX_VALUE-1,0,0));
+    }
     @Test void historyIsIndependent(){var h=new TextHistory();h.remember("a");h.remember("b");assertEquals("b",h.undo("c"));assertEquals("a",h.undo("b"));assertEquals("a",h.undo("a"));}
 }

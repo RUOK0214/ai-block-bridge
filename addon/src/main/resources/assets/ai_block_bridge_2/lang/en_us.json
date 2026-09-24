@@ -1,0 +1,11 @@
+{
+  "ai_block_bridge_2.watch.confirm": "About to enable automation in the world '%s'. Requests clear and place blocks, and raising the tick rate speeds up this whole server. If this is a throwaway test world, type /abb2 watch confirm.",
+  "ai_block_bridge_2.watch.expired": "That confirmation timed out. Start again with /abb2 watch on.",
+  "ai_block_bridge_2.watch.nothing_pending": "Nothing waiting to be confirmed. Run /abb2 watch on first.",
+  "ai_block_bridge_2.watch.enabled": "Watching in the world '%s': %s",
+  "ai_block_bridge_2.watch.disabled": "Stopped watching.",
+  "ai_block_bridge_2.watch.status_on": "Watching: %s",
+  "ai_block_bridge_2.watch.status_off": "Not watching.",
+  "ai_block_bridge_2.watch.no_server": "No server.",
+  "ai_block_bridge_2.watch.failed": "Failed: %s"
+}

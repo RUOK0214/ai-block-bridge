@@ -54,6 +54,9 @@ implements ClientModInitializer {
     public static String exportUndo;
     public static String timeline;
     public static String timelineStatus;
+    public static String settleReport;
+    public static String testScript;
+    public static String testReport;
     public static RecordingBundle recordingBundle;
     public static boolean recording;
     public static boolean recordingAvailable;
@@ -109,7 +112,8 @@ implements ClientModInitializer {
                 recordingAvailable = false;
                 recordingStopReason = null;
             }
-            if (BridgeClient.busy() && System.nanoTime() - sentAt > 30000000000L) {
+            long timeout = pendingAction == BridgePacket.RUN_TEST ? 900_000_000_000L : 30_000_000_000L;
+            if (BridgeClient.busy() && System.nanoTime() - sentAt > timeout) {
                 pending = -1;
                 pendingAction = -1;
                 response = null;
@@ -177,6 +181,12 @@ implements ClientModInitializer {
                     exportUndo = exportBefore;
                     BridgeClient.replace(body);
                     status = Messages.text("ai_block_bridge.captured", new Object[0]);
+                } else if (packet.action() == BridgePacket.SETTLE_REPORT) {
+                    settleReport = body;
+                    status = Messages.text("ai_block_bridge.settle.complete", new Object[0]);
+                } else if (packet.action() == BridgePacket.TEST_REPORT) {
+                    testReport = body;
+                    status = Messages.text("ai_block_bridge.test.complete", new Object[0]);
                 } else if (packet.action() == 7 || packet.action() == 9) {
                     RecordingBundle received = packet.action() == 9 ? RecordingBundle.decode(body) : null;
                     BridgeClient.replaceTimeline(received == null ? body : received.timeline());
@@ -204,6 +214,15 @@ implements ClientModInitializer {
                     screen.syncText();
                 } else if ((packet.action() == 7 || packet.action() == 9) && ctx.client().gui.screen() == null) {
                     ctx.client().gui.setScreen((Screen)new TimelineScreen());
+                }
+                if (ctx.client().gui.screen() instanceof TestScreen screen) {
+                    screen.syncText();
+                }
+                Screen current = ctx.client().gui.screen();
+                if (packet.action() == BridgePacket.SETTLE_REPORT && (current == null || current instanceof BridgeScreen)) {
+                    ctx.client().gui.setScreen((Screen)ReportScreen.settle(current));
+                } else if (packet.action() == BridgePacket.TEST_REPORT && (current == null || current instanceof TestScreen || current instanceof BridgeScreen)) {
+                    ctx.client().gui.setScreen((Screen)ReportScreen.test(current));
                 }
             }
             catch (Exception ex) {
@@ -286,7 +305,7 @@ implements ClientModInitializer {
             response = null;
             exportBefore = script;
             BridgePacket packet = new BridgePacket(pending, action, 0, 1, dimension, r.x(), r.y(), r.z(), r.maxX(), r.maxY(), r.maxZ(), "");
-            String body = action == 1 ? script : (action == 0 ? new CaptureOptions(includeStructureEntities, false, true, false, false, false, false, false, paletteFormat).encode() : (action == 5 ? new CaptureOptions(includeStructureEntities, includeTimelineEntities, ignoreHopperCooldown, ignoreEntityAgeMotion, entityDelta, shortEntityIds, shortBlockStates, blockNbtDelta, paletteFormat).encode() : ""));
+            String body = action == BridgePacket.RUN_TEST ? testScript : (action == 1 || action == BridgePacket.SETTLE ? script : (action == 0 ? new CaptureOptions(includeStructureEntities, false, true, false, false, false, false, false, paletteFormat).encode() : (action == 5 ? new CaptureOptions(includeStructureEntities, includeTimelineEntities, ignoreHopperCooldown, ignoreEntityAgeMotion, entityDelta, shortEntityIds, shortBlockStates, blockNbtDelta, paletteFormat).encode() : "")));
             packet.chunks(body, action, ClientPlayNetworking::send);
             status = Messages.text("ai_block_bridge.processing", new Object[0]);
         }
@@ -303,6 +322,9 @@ implements ClientModInitializer {
         status = Messages.text("ai_block_bridge.select_hint", new Object[0]);
         timeline = "# AI Block Bridge Timeline v1\n# Changes after recording starts are listed in @tick order.\n";
         timelineStatus = Messages.text("ai_block_bridge.timeline.ready", new Object[0]);
+        settleReport = "";
+        testScript = "# AI Block Bridge Test v1\n# @case <name> / set <x y z> | block[state] / wait <ticks> / expect <x y z> | block[state]\n@case example\nwait 10\n";
+        testReport = "";
         ignoreHopperCooldown = true;
         includeStructureEntities = false;
         includeTimelineEntities = false;

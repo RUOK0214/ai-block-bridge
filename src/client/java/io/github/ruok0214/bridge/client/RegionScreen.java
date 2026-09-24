@@ -28,6 +28,7 @@ extends Screen {
     private final Screen parent;
     private final EditBox[] fields = new EditBox[6];
     private Button apply;
+    private Button moveHere;
     private String notice = "";
 
     public RegionScreen(Screen parent) {
@@ -78,8 +79,32 @@ extends Screen {
                 this.fields[r * 3 + 2].setValue("" + here.getZ());
             });
         }
+        this.moveHere = this.addRenderableWidget(Button.builder(Messages.component(Messages.text("ai_block_bridge.button.move_here", new Object[0])), b -> this.moveToPlayer()).bounds(8, 106, this.width - 16, 20).build());
         this.apply = this.addRenderableWidget(Button.builder(Messages.component(Messages.text("ai_block_bridge.button.apply", new Object[0])), b -> this.apply()).bounds(8, 128, (this.width - 20) / 2, 20).build());
         this.button("ai_block_bridge.menu.back", 12 + (this.width - 20) / 2, 128, this.width - 20 - (this.width - 20) / 2, this::onClose);
+    }
+
+    /** Shifts both corners so the region's minimum corner, the script's 0 0 0, lands on the player. */
+    private void moveToPlayer() {
+        if (this.minecraft.player == null) {
+            return;
+        }
+        try {
+            int[] v = new int[6];
+            for (int i = 0; i < 6; ++i) {
+                v[i] = Integer.parseInt(this.fields[i].getValue());
+            }
+            BlockPos here = this.minecraft.player.blockPosition();
+            Region moved = Region.of(v[0], v[1], v[2], v[3], v[4], v[5]).movedTo(here.getX(), here.getY(), here.getZ());
+            int[] delta = {here.getX() - Math.min(v[0], v[3]), here.getY() - Math.min(v[1], v[4]), here.getZ() - Math.min(v[2], v[5])};
+            for (int i = 0; i < 6; ++i) {
+                this.fields[i].setValue("" + (v[i] + delta[i % 3]));
+            }
+            this.notice = Messages.text("ai_block_bridge.moved", moved.description());
+        }
+        catch (Exception ex) {
+            this.notice = Messages.text("ai_block_bridge.coordinates_failed", ex.getMessage());
+        }
     }
 
     private void apply() {
@@ -104,6 +129,7 @@ extends Screen {
 
     public void tick() {
         this.apply.active = !BridgeClient.busy() && !BridgeClient.recording && !BridgeClient.recordingAvailable;
+        this.moveHere.active = this.apply.active;
         for (EditBox f : this.fields) {
             f.setEditable(this.apply.active);
         }
