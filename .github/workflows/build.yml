@@ -16,7 +16,7 @@ jobs:
       - name: Test and build
         run: bash gradlew build --console=plain
       - name: Client rendering smoke test
-        run: xvfb-run -a bash gradlew runClientGameTest --console=plain
+        run: xvfb-run -a bash gradlew :runClientGameTest --no-parallel --console=plain
       - uses: actions/upload-artifact@v4
         with:
           name: ai-block-bridge-26.2
