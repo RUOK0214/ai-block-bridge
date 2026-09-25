@@ -16,10 +16,11 @@ import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.Screen;
 
 /** Editor for test scripts that drive inputs and check outputs. */
-public final class TestScreen extends Screen {
+public final class TestScreen extends WorkspaceScreen {
     private final List<Button> actions = new ArrayList<>();
     private MultiLineEditBox editor;
-    private Button currentTab;
+    private static final io.github.ruok0214.bridge.TextHistory history = new io.github.ruok0214.bridge.TextHistory();
+    private Button options;
     private Button results;
     private boolean syncing;
     private int editorHeight;
@@ -30,28 +31,29 @@ public final class TestScreen extends Screen {
 
     private Button button(String title, int x, int y, int w, Runnable action) {
         Button b = addRenderableWidget(Button.builder(Messages.component(title), btn -> action.run()).bounds(x, y, w, 20).build());
+        b.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Messages.component(title)));
         actions.add(b);
         return b;
     }
 
     @Override protected void init() {
         actions.clear();
-        button(Messages.text("ai_block_bridge.button.close"), width - 66, 4, 58, this::onClose);
-        int nav = (width - 32) / 5;
-        button(Messages.text("ai_block_bridge.menu.structure"), 8, 24, nav, () -> minecraft.gui.setScreen(new BridgeScreen()));
-        button(Messages.text("ai_block_bridge.menu.timeline"), 12 + nav, 24, nav, () -> minecraft.gui.setScreen(new TimelineScreen()));
-        currentTab = button(Messages.text("ai_block_bridge.menu.test"), 16 + nav * 2, 24, nav, () -> {});
-        button(Messages.text("ai_block_bridge.prompt.open"), 20 + nav * 3, 24, nav, () -> minecraft.gui.setScreen(new AiPromptScreen(this)));
-        results = button(Messages.text("ai_block_bridge.menu.test_results"), 24 + nav * 4, 24, nav,
+        initWorkspace(2, false);
+        int toolWidth = columnWidth(4);
+        button(Messages.text("ai_block_bridge.button.validate"), columnX(0, 4), 72, toolWidth, this::validate);
+        button(Messages.text("ai_block_bridge.test.run"), columnX(1, 4), 72, toolWidth, this::run);
+        results = button(Messages.text("ai_block_bridge.menu.test_results"), columnX(2, 4), 72, toolWidth,
             () -> minecraft.gui.setScreen(ReportScreen.test(this)));
-
-        editorHeight = Math.max(12, height - 142);
-        editor = MultiLineEditBox.builder().setX(8).setY(64).setShowDecorations(false)
+        options = button(Messages.text("ai_block_bridge.record_options.title"), columnX(3, 4), 72, toolWidth,
+            () -> minecraft.gui.setScreen(new RecordingOptionsScreen(this)));
+        editorHeight = Math.max(12, height - 158);
+        editor = MultiLineEditBox.builder().setX(8).setY(104).setShowDecorations(true)
             .build(font, width - 16, editorHeight, Messages.component(Messages.text("ai_block_bridge.menu.test_editor")));
         editor.setCharacterLimit(TestScript.MAX_CHARS);
         editor.setValue(BridgeClient.testScript);
         editor.setValueListener(value -> {
             if (syncing) return;
+            history.remember(BridgeClient.testScript);
             BridgeClient.testScript = value;
             errorLine = 0;
         });
@@ -65,8 +67,34 @@ public final class TestScreen extends Screen {
             minecraft.keyboardHandler.setClipboard(BridgeClient.testScript);
             BridgeClient.status = Messages.text("ai_block_bridge.copied");
         });
-        button(Messages.text("ai_block_bridge.test.run"), 20 + w * 3, bottom, w, this::run);
-        currentTab.active = false;
+        button(Messages.text("ai_block_bridge.button.undo_text"), 20 + w * 3, bottom, w, this::undoText);
+        tick();
+    }
+
+    private void undoText() {
+        BridgeClient.testScript = history.undo(BridgeClient.testScript);
+        syncText();
+    }
+
+    private void validate() {
+        try {
+            String misplaced = ScriptKind.misplaced(BridgeClient.testScript, ScriptKind.TEST);
+            if (misplaced != null) { BridgeClient.status = misplaced; return; }
+            int cases = TestScript.parse(BridgeClient.testScript, BridgeClient.region()).size();
+            BridgeClient.status = Messages.text("ai_block_bridge.ui.test_validated", cases);
+        } catch (Exception ex) { BridgeClient.status = ex.getMessage(); }
+    }
+
+    @Override public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
+        if (editor.isFocused()) {
+            if (BridgeClient.busy() && event.key() != 256) return true;
+            if ((event.modifiers() & 0xA) != 0 && event.key() == 90) { undoText(); return true; }
+        }
+        return super.keyPressed(event);
+    }
+
+    @Override public boolean charTyped(net.minecraft.client.input.CharacterEvent event) {
+        return BridgeClient.busy() || super.charTyped(event);
     }
 
     private void run() {
@@ -104,6 +132,7 @@ public final class TestScreen extends Screen {
             String misplaced = ScriptKind.misplaced(text, ScriptKind.TEST);
             if (misplaced != null) { BridgeClient.status = misplaced; return; }
             confirm(Messages.text("ai_block_bridge.button.import"), Messages.text("ai_block_bridge.confirm.import", file.getFileName()), () -> {
+                history.remember(BridgeClient.testScript);
                 BridgeClient.testScript = text;
                 syncText();
                 BridgeClient.status = Messages.text("ai_block_bridge.loaded", file.getFileName());
@@ -133,7 +162,8 @@ public final class TestScreen extends Screen {
     @Override public void tick() {
         boolean enabled = !BridgeClient.busy();
         for (Button button : actions) button.active = enabled;
-        currentTab.active = false;
+        tickWorkspace();
+        options.active = enabled && !BridgeClient.recording && !BridgeClient.recordingAvailable;
         results.active = enabled && !BridgeClient.testReport.isEmpty();
         editor.active = enabled;
         if (lastStatus.equals(BridgeClient.status)) return;
@@ -143,13 +173,9 @@ public final class TestScreen extends Screen {
     }
 
     @Override public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
-        String region;
         super.extractRenderState(g, mx, my, delta);
-        g.text(font, title, 8, 9, 0xFFFFFFFF, true);
-        try { region = BridgeClient.region().description(); }
-        catch (Exception ex) { region = ex.getMessage(); }
-        g.text(font, font.plainSubstrByWidth(Messages.display(region), width - 16), 8, 50, 0xFFCCCCCC, false);
-        EditorErrorMarker.extract(g, font, editor, BridgeClient.testScript, errorLine, 8, 64, width - 16, editorHeight);
+        drawWorkspace(g, "ai_block_bridge.menu.test_editor");
+        EditorErrorMarker.extract(g, font, editor, BridgeClient.testScript, errorLine, 8, 104, width - 16, editorHeight);
         g.text(font, font.plainSubstrByWidth(Messages.display(BridgeClient.status), width - 16), 8, height - 22, 0xFFFFDF8D, false);
         g.text(font, font.plainSubstrByWidth(Messages.display(Messages.text("ai_block_bridge.test.hint")), width - 16),
             8, height - 10, 0xFFAAAAAA, false);

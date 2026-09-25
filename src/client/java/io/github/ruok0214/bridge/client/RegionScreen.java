@@ -63,13 +63,13 @@ extends Screen {
             for (int col = 0; col < 3; ++col) {
                 int i = row * 3 + col;
                 String value = this.fields[i] == null ? Integer.toString(initial[col]) : this.fields[i].getValue();
-                EditBox f = new EditBox(this.font, 40 + col * (fieldWidth + 3), 52 + row * 32, fieldWidth, 20, Messages.component(Messages.text("ai_block_bridge.corner_field", row + 1, Character.valueOf("XYZ".charAt(col)))));
+                EditBox f = new EditBox(this.font, 40 + col * (fieldWidth + 3), 64 + row * 36, fieldWidth, 20, Messages.component(Messages.text("ai_block_bridge.corner_field", row + 1, Character.valueOf("XYZ".charAt(col)))));
                 f.setMaxLength(11);
                 f.setValue(value);
                 this.fields[i] = this.addRenderableWidget(f);
             }
             int r = row;
-            this.button("ai_block_bridge.button.position", this.width - 57, 52 + row * 32, 49, () -> {
+            this.button("ai_block_bridge.button.position", this.width - 57, 64 + row * 36, 49, () -> {
                 if (this.minecraft.player == null) {
                     return;
                 }
@@ -79,9 +79,9 @@ extends Screen {
                 this.fields[r * 3 + 2].setValue("" + here.getZ());
             });
         }
-        this.moveHere = this.addRenderableWidget(Button.builder(Messages.component(Messages.text("ai_block_bridge.button.move_here", new Object[0])), b -> this.moveToPlayer()).bounds(8, 106, this.width - 16, 20).build());
-        this.apply = this.addRenderableWidget(Button.builder(Messages.component(Messages.text("ai_block_bridge.button.apply", new Object[0])), b -> this.apply()).bounds(8, 128, (this.width - 20) / 2, 20).build());
-        this.button("ai_block_bridge.menu.back", 12 + (this.width - 20) / 2, 128, this.width - 20 - (this.width - 20) / 2, this::onClose);
+        this.moveHere = this.addRenderableWidget(Button.builder(Messages.component(Messages.text("ai_block_bridge.button.move_here", new Object[0])), b -> this.moveToPlayer()).bounds(8, 132, this.width - 16, 20).build());
+        this.apply = this.addRenderableWidget(Button.builder(Messages.component(Messages.text("ai_block_bridge.button.apply", new Object[0])), b -> this.apply()).bounds(8, this.height - 28, (this.width - 20) / 2, 20).build());
+        this.button("ai_block_bridge.menu.back", 12 + (this.width - 20) / 2, this.height - 28, this.width - 20 - (this.width - 20) / 2, this::onClose);
     }
 
     /** Shifts both corners so the region's minimum corner, the script's 0 0 0, lands on the player. */
@@ -143,13 +143,20 @@ extends Screen {
         super.extractRenderState(g, mx, my, delta);
         g.text(this.font, this.title, 8, 8, -1, true);
         g.text(this.font, this.font.plainSubstrByWidth(Messages.display(Messages.text("ai_block_bridge.menu.area_hint", new Object[0])), this.width - 16), 8, 30, -3355444, false);
-        g.text(this.font, "1 XYZ", 8, 58, -6431745, false);
-        g.text(this.font, "2 XYZ", 8, 90, -12414, false);
-        g.text(this.font, this.font.plainSubstrByWidth(Messages.display(this.notice), this.width - 16), 8, 158, -8307, false);
+        int fieldWidth = (this.width - 112) / 3;
+        for (int col = 0; col < 3; col++) g.text(this.font, "" + "XYZ".charAt(col), 40 + col * (fieldWidth + 3), 52, -3355444, false);
+        try {
+            int[] v = new int[6];
+            for (int i = 0; i < v.length; i++) v[i] = Integer.parseInt(fields[i].getValue());
+            String preview = Region.of(v[0], v[1], v[2], v[3], v[4], v[5]).description();
+            g.text(font, font.plainSubstrByWidth(Messages.display(preview), width - 16), 8, 164, 0xFF82D9CF, false);
+        } catch (Exception ignored) { /* The apply action reports invalid coordinates. */ }
+        g.text(this.font, "1", 8, 70, -6431745, false);
+        g.text(this.font, "2", 8, 106, -12414, false);
+        g.text(this.font, this.font.plainSubstrByWidth(Messages.display(this.notice), this.width - 16), 8, 180, -8307, false);
     }
 
     public boolean isPauseScreen() {
         return false;
     }
 }
-

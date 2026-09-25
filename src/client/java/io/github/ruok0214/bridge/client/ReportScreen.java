@@ -43,7 +43,7 @@ public final class ReportScreen extends Screen {
             minecraft.keyboardHandler.setClipboard(body.get());
             status = Messages.text(copiedKey);
         }).bounds(8, height - 56, (width - 20) / 2, 20).build());
-        addRenderableWidget(Button.builder(Messages.component(Messages.text("ai_block_bridge.button.close")),
+        addRenderableWidget(Button.builder(Messages.component(Messages.text("ai_block_bridge.menu.back")),
             b -> onClose()).bounds(12 + (width - 20) / 2, height - 56, (width - 20) / 2, 20).build());
     }
 

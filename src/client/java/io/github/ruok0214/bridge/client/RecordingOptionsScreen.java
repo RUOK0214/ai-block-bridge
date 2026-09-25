@@ -1,97 +1,111 @@
-/*
- * Decompiled with CFR 0.152.
- * 
- * Could not load the following classes:
- *  net.minecraft.client.gui.GuiGraphicsExtractor
- *  net.minecraft.client.gui.components.Button
- *  net.minecraft.client.gui.components.Tooltip
- *  net.minecraft.client.gui.components.events.GuiEventListener
- *  net.minecraft.client.gui.screens.Screen
- *  net.minecraft.network.chat.Component
- */
 package io.github.ruok0214.bridge.client;
 
 import io.github.ruok0214.bridge.Messages;
-import io.github.ruok0214.bridge.client.BlockRecordingOptionsScreen;
-import io.github.ruok0214.bridge.client.BridgeClient;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.BooleanSupplier;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
-import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.network.chat.Component;
 
-public final class RecordingOptionsScreen
-extends Screen {
+/** All recording preferences in one window, grouped by what they affect. */
+public class RecordingOptionsScreen extends Screen {
     private final Screen parent;
-    private Button entities;
-    private Button noise;
-    private Button cooldown;
-    private Button delta;
-    private Button ids;
-    private Button blocks;
+    private final List<Button> options = new ArrayList<>();
+    private final List<Button> entityDetails = new ArrayList<>();
+    private int page;
 
-    public RecordingOptionsScreen(Screen parent) {
-        super(Messages.component(Messages.text("ai_block_bridge.record_options.title", new Object[0])));
+    public RecordingOptionsScreen(Screen parent) { this(parent, 0); }
+    protected RecordingOptionsScreen(Screen parent, int page) {
+        super(Messages.component(Messages.text("ai_block_bridge.record_options.title")));
         this.parent = parent;
+        this.page = page;
     }
 
-    private String label(String key, boolean on) {
-        return Messages.text(key, Messages.text(on ? "ai_block_bridge.on" : "ai_block_bridge.off", new Object[0]));
-    }
+    private int contentWidth() { return Math.min(560, width - 16); }
+    private int left() { return (width - contentWidth()) / 2; }
 
-    private Button toggle(String key, String hint, int y, BooleanSupplier value, Runnable change) {
-        Button b = this.addRenderableWidget(Button.builder(Messages.component(this.label(key, value.getAsBoolean())), button -> {
+    private Button toggle(String key, String hint, int row, BooleanSupplier value, Runnable change) {
+        Button button = addRenderableWidget(Button.builder(Messages.component(label(key, value.getAsBoolean())), b -> {
+            if (!editable()) return;
             change.run();
-            button.setMessage(Messages.component(this.label(key, value.getAsBoolean())));
-        }).bounds(8, y, this.width - 16, 20).build());
-        b.setTooltip(Tooltip.create((Component)Messages.component(Messages.text(hint, new Object[0]))));
-        return b;
+            b.setMessage(Messages.component(label(key, value.getAsBoolean())));
+            tick();
+        }).bounds(left(), 66 + row * 24, contentWidth(), 20).build());
+        button.setTooltip(Tooltip.create(Messages.component(Messages.text(hint))));
+        options.add(button);
+        return button;
     }
 
-    protected void init() {
-        this.entities = this.toggle("ai_block_bridge.entities.timeline", "ai_block_bridge.entities.timeline_hint", 32, () -> BridgeClient.includeTimelineEntities, () -> {
-            BridgeClient.includeTimelineEntities = !BridgeClient.includeTimelineEntities;
-        });
-        this.noise = this.toggle("ai_block_bridge.record_options.noise", "ai_block_bridge.record_options.noise_hint", 56, () -> BridgeClient.ignoreEntityAgeMotion, () -> {
-            BridgeClient.ignoreEntityAgeMotion = !BridgeClient.ignoreEntityAgeMotion;
-        });
-        this.cooldown = this.toggle("ai_block_bridge.menu.cooldown", "ai_block_bridge.menu.cooldown_hint", 80, () -> BridgeClient.ignoreHopperCooldown, () -> {
-            BridgeClient.ignoreHopperCooldown = !BridgeClient.ignoreHopperCooldown;
-        });
-        this.delta = this.toggle("ai_block_bridge.record_options.delta", "ai_block_bridge.record_options.delta_hint", 104, () -> BridgeClient.entityDelta, () -> {
-            BridgeClient.entityDelta = !BridgeClient.entityDelta;
-        });
-        this.ids = this.toggle("ai_block_bridge.record_options.ids", "ai_block_bridge.record_options.ids_hint", 128, () -> BridgeClient.shortEntityIds, () -> {
-            BridgeClient.shortEntityIds = !BridgeClient.shortEntityIds;
-        });
-        this.blocks = this.addRenderableWidget(Button.builder(Messages.component(Messages.text("ai_block_bridge.record_options.blocks", new Object[0])), b -> this.minecraft.gui.setScreen(new BlockRecordingOptionsScreen(this))).bounds(8, 152, this.width - 16, 20).build());
-        this.addRenderableWidget(Button.builder(Messages.component(Messages.text("ai_block_bridge.menu.back", new Object[0])), b -> this.onClose()).bounds(8, this.height - 28, this.width - 16, 20).build());
+    private String label(String key, boolean value) {
+        return Messages.text(key, Messages.text(value ? "ai_block_bridge.on" : "ai_block_bridge.off"));
     }
 
-    public void tick() {
-        boolean idle;
-        this.blocks.active = idle = !BridgeClient.busy() && !BridgeClient.recording && !BridgeClient.recordingAvailable;
-        this.entities.active = idle;
-        this.noise.active = idle && BridgeClient.includeTimelineEntities;
-        this.cooldown.active = idle;
-        this.delta.active = this.noise.active;
-        this.ids.active = this.noise.active;
+    private boolean editable() {
+        return !BridgeClient.busy() && !BridgeClient.recording && !BridgeClient.recordingAvailable;
     }
 
-    public void onClose() {
-        this.minecraft.gui.setScreen(this.parent);
+    @Override protected void init() {
+        options.clear();
+        entityDetails.clear();
+        String[] pages = {"general", "blocks", "entities"};
+        int w = (contentWidth() - 8) / 3;
+        for (int i = 0; i < pages.length; i++) {
+            int target = i;
+            Button tab = addRenderableWidget(Button.builder(Messages.component(Messages.text("ai_block_bridge.ui.options." + pages[i])),
+                b -> { page = target; rebuildWidgets(); }).bounds(left() + i * (w + 4), 30, w, 20).build());
+            tab.active = i != page;
+        }
+        if (page == 0) {
+            Button format = addRenderableWidget(Button.builder(Messages.component(WorkspaceScreen.formatLabel()), b -> {
+                if (!editable()) return;
+                BridgeClient.paletteFormat = !BridgeClient.paletteFormat;
+                b.setMessage(Messages.component(WorkspaceScreen.formatLabel()));
+            }).bounds(left(), 66, contentWidth(), 20).build());
+            format.setTooltip(Tooltip.create(Messages.component(Messages.text("ai_block_bridge.ui.format_hint"))));
+            options.add(format);
+            toggle("ai_block_bridge.ui.structure_entities", "ai_block_bridge.entities.structure_hint", 1,
+                () -> BridgeClient.includeStructureEntities, () -> BridgeClient.includeStructureEntities = !BridgeClient.includeStructureEntities);
+            toggle("ai_block_bridge.ui.timeline_entities", "ai_block_bridge.entities.timeline_hint", 2,
+                () -> BridgeClient.includeTimelineEntities, () -> BridgeClient.includeTimelineEntities = !BridgeClient.includeTimelineEntities);
+        } else if (page == 1) {
+            toggle("ai_block_bridge.menu.cooldown", "ai_block_bridge.menu.cooldown_hint", 0,
+                () -> BridgeClient.ignoreHopperCooldown, () -> BridgeClient.ignoreHopperCooldown = !BridgeClient.ignoreHopperCooldown);
+            toggle("ai_block_bridge.record_options.block_states", "ai_block_bridge.record_options.block_states_hint", 1,
+                () -> BridgeClient.shortBlockStates, () -> BridgeClient.shortBlockStates = !BridgeClient.shortBlockStates);
+            toggle("ai_block_bridge.record_options.block_nbt", "ai_block_bridge.record_options.block_nbt_hint", 2,
+                () -> BridgeClient.blockNbtDelta, () -> BridgeClient.blockNbtDelta = !BridgeClient.blockNbtDelta);
+        } else {
+            toggle("ai_block_bridge.ui.timeline_entities", "ai_block_bridge.entities.timeline_hint", 0,
+                () -> BridgeClient.includeTimelineEntities, () -> BridgeClient.includeTimelineEntities = !BridgeClient.includeTimelineEntities);
+            entityDetails.add(toggle("ai_block_bridge.record_options.noise", "ai_block_bridge.record_options.noise_hint", 1,
+                () -> BridgeClient.ignoreEntityAgeMotion, () -> BridgeClient.ignoreEntityAgeMotion = !BridgeClient.ignoreEntityAgeMotion));
+            entityDetails.add(toggle("ai_block_bridge.record_options.delta", "ai_block_bridge.record_options.delta_hint", 2,
+                () -> BridgeClient.entityDelta, () -> BridgeClient.entityDelta = !BridgeClient.entityDelta));
+            entityDetails.add(toggle("ai_block_bridge.record_options.ids", "ai_block_bridge.record_options.ids_hint", 3,
+                () -> BridgeClient.shortEntityIds, () -> BridgeClient.shortEntityIds = !BridgeClient.shortEntityIds));
+        }
+        addRenderableWidget(Button.builder(Messages.component(Messages.text("ai_block_bridge.menu.back")), b -> onClose())
+            .bounds(left(), height - 28, contentWidth(), 20).build());
+        tick();
     }
 
-    public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
+    @Override public void tick() {
+        boolean enabled = editable();
+        for (Button option : options) option.active = enabled;
+        for (Button option : entityDetails) option.active = enabled && BridgeClient.includeTimelineEntities;
+    }
+
+    @Override public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
         super.extractRenderState(g, mx, my, delta);
-        g.text(this.font, this.title, 8, 8, -1, true);
-        g.text(this.font, this.font.plainSubstrByWidth(Messages.display(Messages.text("ai_block_bridge.record_options.hint", new Object[0])), this.width - 16), 8, 184, -3355444, false);
+        g.text(font, title, left(), 9, 0xFFFFFFFF, true);
+        String scope = page == 0 ? "ai_block_bridge.ui.options.general_hint" : "ai_block_bridge.ui.options.timeline_hint";
+        g.text(font, font.plainSubstrByWidth(Messages.display(Messages.text(scope)), contentWidth()), left(), 55, 0xFF82D9CF, false);
+        String hint = editable() ? "ai_block_bridge.ui.options.next_capture" : "ai_block_bridge.ui.options.locked";
+        g.text(font, font.plainSubstrByWidth(Messages.display(Messages.text(hint)), contentWidth()), left(), height - 43, 0xFFCCCCCC, false);
     }
 
-    public boolean isPauseScreen() {
-        return false;
-    }
+    @Override public void onClose() { minecraft.gui.setScreen(parent); }
+    @Override public boolean isPauseScreen() { return false; }
 }
-

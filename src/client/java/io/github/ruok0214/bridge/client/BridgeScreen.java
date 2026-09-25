@@ -44,12 +44,12 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
 
 public final class BridgeScreen
-extends Screen {
+extends WorkspaceScreen {
     private final List<Button> actions = new ArrayList<Button>();
     private MultiLineEditBox editor;
     private Button exportUndoButton;
     private Button entities;
-    private Button currentTab;
+    private Button recordingOptions;
     private boolean syncing;
     private int editorHeight;
     private int errorLine;
@@ -61,20 +61,14 @@ extends Screen {
 
     private Button button(String title, int x, int y, int w, Runnable action) {
         Button b = this.addRenderableWidget(Button.builder(Messages.component(title), btn -> action.run()).bounds(x, y, w, 20).build());
+        b.setTooltip(Tooltip.create(Messages.component(title)));
         this.actions.add(b);
         return b;
     }
 
     protected void init() {
         this.actions.clear();
-        this.button(Messages.text("ai_block_bridge.button.close", new Object[0]), this.width - 66, 4, 58, () -> ((BridgeScreen)this).onClose());
-        int nav = (this.width - 32) / 5;
-        this.currentTab = this.button(Messages.text("ai_block_bridge.menu.structure", new Object[0]), 8, 24, nav, () -> {});
-        this.button(Messages.text("ai_block_bridge.menu.timeline", new Object[0]), 12 + nav, 24, nav, () -> this.minecraft.gui.setScreen((Screen)new TimelineScreen()));
-        this.button(Messages.text("ai_block_bridge.menu.test", new Object[0]), 16 + nav * 2, 24, nav, () -> this.minecraft.gui.setScreen((Screen)new TestScreen()));
-        this.button(Messages.text("ai_block_bridge.prompt.open", new Object[0]), 20 + nav * 3, 24, nav, () -> this.minecraft.gui.setScreen((Screen)new AiPromptScreen(this)));
-        this.button(Messages.text("ai_block_bridge.button.help", new Object[0]), 24 + nav * 4, 24, nav, () -> this.confirm(Messages.text("ai_block_bridge.help.title", new Object[0]), Messages.text("ai_block_bridge.help.body", Region.MAX_BLOCKS_TEXT), () -> {}));
-        this.button(Messages.text("ai_block_bridge.menu.area", new Object[0]), this.width - 100, 48, 92, () -> this.minecraft.gui.setScreen((Screen)new RegionScreen(this)));
+        initWorkspace(0, true);
         int tools = (this.width - 28) / 4;
         this.button(Messages.text("ai_block_bridge.button.capture", new Object[0]), 8, 72, tools, () -> {
             if (this.checkRegion()) {
@@ -97,9 +91,9 @@ extends Screen {
             this.entities.setMessage(Messages.component(this.entityLabel()));
         });
         this.entities.setTooltip(Tooltip.create((Component)Messages.component(Messages.text("ai_block_bridge.entities.structure_hint", new Object[0]))));
-        this.button(Messages.text("ai_block_bridge.record_options.title", new Object[0]), 20 + tools * 3, 72, tools, () -> this.minecraft.gui.setScreen((Screen)new RecordingOptionsScreen(this)));
-        this.editorHeight = Math.max(12, this.height - 182);
-        this.editor = MultiLineEditBox.builder().setX(8).setY(104).setShowDecorations(false).build(this.font, this.width - 16, this.editorHeight, Messages.component(Messages.text("ai_block_bridge.editor.script", new Object[0])));
+        this.recordingOptions = this.button(Messages.text("ai_block_bridge.record_options.title", new Object[0]), 20 + tools * 3, 72, tools, () -> this.minecraft.gui.setScreen((Screen)new RecordingOptionsScreen(this)));
+        this.editorHeight = structureEditorHeight();
+        this.editor = MultiLineEditBox.builder().setX(8).setY(104).setShowDecorations(true).build(this.font, this.width - 16, this.editorHeight, Messages.component(Messages.text("ai_block_bridge.editor.script", new Object[0])));
         this.editor.setCharacterLimit(2000000);
         this.editor.setValue(BridgeClient.script);
         this.editor.setValueListener(value -> {
@@ -119,7 +113,7 @@ extends Screen {
         });
         this.button(Messages.text("ai_block_bridge.button.undo_text", new Object[0]), 20 + w * 3, bottom, w, this::undoText);
         int world = (this.width - 32) / 5;
-        this.button(Messages.text("ai_block_bridge.button.validate", new Object[0]), 8, this.height - 72, world, () -> {
+        this.button(Messages.text("ai_block_bridge.button.validate", new Object[0]), executionX(0), executionY(0), executionWidth(), () -> {
             try {
                 String misplaced = ScriptKind.misplaced(BridgeClient.script, ScriptKind.SCRIPT);
                 BridgeClient.status = misplaced != null ? misplaced
@@ -129,7 +123,7 @@ extends Screen {
                 BridgeClient.status = ex.getMessage();
             }
         });
-        this.button(Messages.text("ai_block_bridge.button.paste", new Object[0]), 12 + world, this.height - 72, world, () -> {
+        this.button(Messages.text("ai_block_bridge.button.paste", new Object[0]), executionX(1), executionY(1), executionWidth(), () -> {
             try {
                 Region r = BridgeClient.region();
                 int count = Script.parse(BridgeClient.script, r).size();
@@ -139,9 +133,9 @@ extends Screen {
                 BridgeClient.status = ex.getMessage();
             }
         });
-        this.button(Messages.text("ai_block_bridge.button.undo_paste", new Object[0]), 16 + world * 2, this.height - 72, world, () -> this.confirm(Messages.text("ai_block_bridge.confirm.undo_title", new Object[0]), Messages.text("ai_block_bridge.confirm.undo", new Object[0]), () -> BridgeClient.send(2)));
-        this.button(Messages.text("ai_block_bridge.test.run", new Object[0]), 24 + world * 4, this.height - 72, world, this::runTest);
-        this.button(Messages.text("ai_block_bridge.button.settle", new Object[0]), 20 + world * 3, this.height - 72, world, () -> {
+        this.button(Messages.text("ai_block_bridge.button.undo_paste", new Object[0]), executionX(2), executionY(2), executionWidth(), () -> this.confirm(Messages.text("ai_block_bridge.confirm.undo_title", new Object[0]), Messages.text("ai_block_bridge.confirm.undo", new Object[0]), () -> BridgeClient.send(2)));
+        this.button(Messages.text("ai_block_bridge.test.run", new Object[0]), executionX(4), executionY(4), executionWidth(), this::runTest);
+        this.button(Messages.text("ai_block_bridge.button.settle", new Object[0]), executionX(3), executionY(3), executionWidth(), () -> {
             try {
                 Region r = BridgeClient.region();
                 Script.parse(BridgeClient.script, r);
@@ -151,7 +145,7 @@ extends Screen {
                 BridgeClient.status = ex.getMessage();
             }
         });
-        this.currentTab.active = false;
+        tick();
     }
 
     /** Runs the script held by the test tab, so a pasted circuit can be checked without leaving this screen. */
@@ -265,7 +259,8 @@ extends Screen {
             button.active = enabled;
         }
         this.exportUndoButton.active = enabled && BridgeClient.exportUndo != null;
-        this.currentTab.active = false;
+        tickWorkspace();
+        this.recordingOptions.active = enabled && !BridgeClient.recording && !BridgeClient.recordingAvailable;
         this.editor.active = enabled;
         if (this.lastStatus.equals(BridgeClient.status)) {
             return;
@@ -298,17 +293,8 @@ extends Screen {
     }
 
     public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
-        String region;
         super.extractRenderState(g, mx, my, delta);
-        g.text(this.font, "AI BLOCK BRIDGE \u00b7 26.2", 8, 7, -1, true);
-        try {
-            region = BridgeClient.region().description();
-        }
-        catch (Exception ex) {
-            region = ex.getMessage();
-        }
-        g.text(this.font, this.font.plainSubstrByWidth(Messages.display(region), this.width - 116), 8, 54, -3355444, false);
-        g.text(this.font, Messages.component(Messages.text("ai_block_bridge.menu.structure_editor", new Object[0])), 8, 95, -6431745, false);
+        drawWorkspace(g, "ai_block_bridge.menu.structure_editor");
         EditorErrorMarker.extract(g, this.font, this.editor, BridgeClient.script, this.errorLine, 8, 104, this.width - 16, this.editorHeight);
         g.text(this.font, this.font.plainSubstrByWidth(Messages.display(BridgeClient.status), this.width - 16), 8, this.height - 22, -8307, false);
         g.text(this.font, this.font.plainSubstrByWidth(Messages.display(Messages.text("ai_block_bridge.editor.hint", new Object[0])), this.width - 16), 8, this.height - 10, -5592406, false);

@@ -60,7 +60,7 @@ public final class AiPromptScreen extends Screen {
             minecraft.keyboardHandler.setClipboard(draft);
             status = Messages.text("ai_block_bridge.prompt.copied");
         });
-        button("ai_block_bridge.button.close", 12 + (width - 20) / 2, height - 56, (width - 20) / 2, this::onClose);
+        button("ai_block_bridge.menu.back", 12 + (width - 20) / 2, height - 56, (width - 20) / 2, this::onClose);
     }
 
     @Override public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {

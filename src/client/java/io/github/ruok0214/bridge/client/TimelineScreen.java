@@ -40,7 +40,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.Util;
 
 public final class TimelineScreen
-extends Screen {
+extends WorkspaceScreen {
     private MultiLineEditBox editor;
     private Button start;
     private Button stop;
@@ -50,7 +50,7 @@ extends Screen {
     private Button undo;
     private Button bundle;
     private Button options;
-    private Button area;
+    private Button entities;
     private boolean syncing;
 
     public TimelineScreen() {
@@ -58,17 +58,14 @@ extends Screen {
     }
 
     private Button button(String title, int x, int y, int w, Runnable action) {
-        return this.addRenderableWidget(Button.builder(Messages.component(title), b -> action.run()).bounds(x, y, w, 20).build());
+        Button button = this.addRenderableWidget(Button.builder(Messages.component(title), b -> action.run()).bounds(x, y, w, 20).build());
+        button.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Messages.component(title)));
+        return button;
     }
 
     protected void init() {
         int w = (this.width - 28) / 4;
-        this.button(Messages.text("ai_block_bridge.button.close", new Object[0]), this.width - 66, 4, 58, () -> ((TimelineScreen)this).onClose());
-        this.button(Messages.text("ai_block_bridge.menu.structure", new Object[0]), 8, 24, w, () -> this.minecraft.gui.setScreen((Screen)new BridgeScreen()));
-        this.button(Messages.text("ai_block_bridge.menu.timeline", new Object[0]),12+w,24,w,()->{}).active=false;
-        this.button(Messages.text("ai_block_bridge.prompt.open", new Object[0]), 16 + w * 2, 24, w, () -> this.minecraft.gui.setScreen((Screen)new AiPromptScreen(this)));
-        this.button(Messages.text("ai_block_bridge.button.help", new Object[0]), 20 + w * 3, 24, w, () -> this.confirm(Messages.text("ai_block_bridge.help.title", new Object[0]), Messages.text("ai_block_bridge.help.body", Region.MAX_BLOCKS_TEXT), () -> {}));
-        this.area = this.button(Messages.text("ai_block_bridge.menu.area", new Object[0]), this.width - 100, 48, 92, () -> this.minecraft.gui.setScreen((Screen)new RegionScreen(this)));
+        initWorkspace(1, true);
         this.start = this.button(Messages.text("ai_block_bridge.button.record_start", new Object[0]), 8, 72, w, () -> this.confirm(Messages.text("ai_block_bridge.confirm.record_title", new Object[0]), Messages.text("ai_block_bridge.confirm.record", new Object[0]), () -> {
             BridgeClient.send(5);
             if (BridgeClient.busy()) {
@@ -76,8 +73,12 @@ extends Screen {
             }
         }));
         this.stop = this.button(Messages.text("ai_block_bridge.button.record_stop", new Object[0]), 12 + w, 72, w, () -> BridgeClient.send(6));
-        this.options = this.button(Messages.text("ai_block_bridge.record_options.title", new Object[0]), 16 + w * 2, 72, this.width - 24 - w * 2, () -> this.minecraft.gui.setScreen((Screen)new RecordingOptionsScreen(this)));
-        this.editor = MultiLineEditBox.builder().setX(8).setY(104).setShowDecorations(false).build(this.font, this.width - 16, Math.max(12, this.height - 182), Messages.component(Messages.text("ai_block_bridge.editor.timeline", new Object[0])));
+        this.options = this.button(Messages.text("ai_block_bridge.record_options.title", new Object[0]), 20 + w * 3, 72, w, () -> this.minecraft.gui.setScreen((Screen)new RecordingOptionsScreen(this)));
+        this.entities = this.button(entityLabel(), 16 + w * 2, 72, w, () -> {
+            BridgeClient.includeTimelineEntities = !BridgeClient.includeTimelineEntities;
+            this.entities.setMessage(Messages.component(entityLabel()));
+        });
+        this.editor = MultiLineEditBox.builder().setX(8).setY(104).setShowDecorations(true).build(this.font, this.width - 16, Math.max(12, this.height - 182), Messages.component(Messages.text("ai_block_bridge.editor.timeline", new Object[0])));
         this.editor.setCharacterLimit(20000000);
         this.editor.setValue(BridgeClient.timeline);
         this.editor.setValueListener(value -> {
@@ -97,6 +98,7 @@ extends Screen {
             BridgeClient.timelineStatus = Messages.text("ai_block_bridge.timeline.copied", new Object[0]);
         });
         this.undo = this.button(Messages.text("ai_block_bridge.button.undo_text", new Object[0]), 20 + w * 3, bottom, w, this::undoText);
+        tick();
     }
 
     private void confirm(String title, String message, Runnable yes) {
@@ -195,9 +197,10 @@ extends Screen {
 
     public void tick() {
         boolean editable;
-        this.area.active = !BridgeClient.busy() && !BridgeClient.recording && !BridgeClient.recordingAvailable;
+        tickWorkspace();
         this.bundle.active = !BridgeClient.busy() && !BridgeClient.recording && BridgeClient.recordingBundle != null;
         this.options.active = !BridgeClient.busy() && !BridgeClient.recording && !BridgeClient.recordingAvailable;
+        this.entities.active = this.options.active;
         boolean idle = !BridgeClient.busy();
         this.start.active = idle && !BridgeClient.recording && !BridgeClient.recordingAvailable;
         this.stop.active = idle && (BridgeClient.recording || BridgeClient.recordingAvailable);
@@ -218,7 +221,7 @@ extends Screen {
     }
 
     public boolean keyPressed(KeyEvent event) {
-        if (this.editor.isFocused() && (event.modifiers() & 0xA) != 0 && event.key() == 90) {
+        if (!BridgeClient.busy() && !BridgeClient.recording && this.editor.isFocused() && (event.modifiers() & 0xA) != 0 && event.key() == 90) {
             this.undoText();
             return true;
         }
@@ -230,17 +233,8 @@ extends Screen {
     }
 
     public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
-        String region;
         super.extractRenderState(g, mx, my, delta);
-        g.text(this.font, Messages.component(Messages.text("ai_block_bridge.menu.title", new Object[0])), 8, 8, -1, true);
-        try {
-            region = BridgeClient.region().description();
-        }
-        catch (Exception ex) {
-            region = ex.getMessage();
-        }
-        g.text(this.font, this.font.plainSubstrByWidth((BridgeClient.recording ? Messages.display(Messages.text("ai_block_bridge.timeline.recording", new Object[0])) : "") + Messages.display(region), this.width - 116), 8, 54, BridgeClient.recording ? -34953 : -3355444, false);
-        g.text(this.font, Messages.component(Messages.text("ai_block_bridge.menu.timeline_editor", new Object[0])), 8, 95, -6431745, false);
+        drawWorkspace(g, BridgeClient.recording ? "ai_block_bridge.timeline.recording" : "ai_block_bridge.menu.timeline_editor");
         g.text(this.font, this.font.plainSubstrByWidth(Messages.display(BridgeClient.timelineStatus), this.width - 16), 8, this.height - 22, -8307, false);
         g.text(this.font, this.font.plainSubstrByWidth(Messages.display(Messages.text("ai_block_bridge.timeline.hint", new Object[0])), this.width - 16), 8, this.height - 10, -5592406, false);
     }

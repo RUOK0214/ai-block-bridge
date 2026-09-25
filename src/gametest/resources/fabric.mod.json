@@ -14,7 +14,8 @@
     ],
     "fabric-client-gametest": [
       "io.github.ruok0214.bridge.SelectionClientTest",
-      "io.github.ruok0214.bridge.RoundTripClientTest"
+      "io.github.ruok0214.bridge.RoundTripClientTest",
+      "io.github.ruok0214.bridge.MenuClientTest"
     ]
   }
 }
