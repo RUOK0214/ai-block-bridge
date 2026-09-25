@@ -78,7 +78,7 @@ extends WorkspaceScreen {
             BridgeClient.includeTimelineEntities = !BridgeClient.includeTimelineEntities;
             this.entities.setMessage(Messages.component(entityLabel()));
         });
-        this.editor = MultiLineEditBox.builder().setX(8).setY(104).setShowDecorations(true).build(this.font, this.width - 16, Math.max(12, this.height - 182), Messages.component(Messages.text("ai_block_bridge.editor.timeline", new Object[0])));
+        this.editor = MultiLineEditBox.builder().setX(8).setY(104).setShowDecorations(false).build(this.font, this.width - 16, Math.max(12, this.height - 182), Messages.component(Messages.text("ai_block_bridge.editor.timeline", new Object[0])));
         this.editor.setCharacterLimit(20000000);
         this.editor.setValue(BridgeClient.timeline);
         this.editor.setValueListener(value -> {
@@ -235,6 +235,7 @@ extends WorkspaceScreen {
     public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
         super.extractRenderState(g, mx, my, delta);
         drawWorkspace(g, BridgeClient.recording ? "ai_block_bridge.timeline.recording" : "ai_block_bridge.menu.timeline_editor");
+        g.outline(7, 103, width - 14, Math.max(12, height - 182) + 2, 0xFF888888);
         g.text(this.font, this.font.plainSubstrByWidth(Messages.display(BridgeClient.timelineStatus), this.width - 16), 8, this.height - 22, -8307, false);
         g.text(this.font, this.font.plainSubstrByWidth(Messages.display(Messages.text("ai_block_bridge.timeline.hint", new Object[0])), this.width - 16), 8, this.height - 10, -5592406, false);
     }

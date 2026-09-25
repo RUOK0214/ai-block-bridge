@@ -93,7 +93,7 @@ extends WorkspaceScreen {
         this.entities.setTooltip(Tooltip.create((Component)Messages.component(Messages.text("ai_block_bridge.entities.structure_hint", new Object[0]))));
         this.recordingOptions = this.button(Messages.text("ai_block_bridge.record_options.title", new Object[0]), 20 + tools * 3, 72, tools, () -> this.minecraft.gui.setScreen((Screen)new RecordingOptionsScreen(this)));
         this.editorHeight = structureEditorHeight();
-        this.editor = MultiLineEditBox.builder().setX(8).setY(104).setShowDecorations(true).build(this.font, this.width - 16, this.editorHeight, Messages.component(Messages.text("ai_block_bridge.editor.script", new Object[0])));
+        this.editor = MultiLineEditBox.builder().setX(8).setY(104).setShowDecorations(false).build(this.font, this.width - 16, this.editorHeight, Messages.component(Messages.text("ai_block_bridge.editor.script", new Object[0])));
         this.editor.setCharacterLimit(2000000);
         this.editor.setValue(BridgeClient.script);
         this.editor.setValueListener(value -> {
@@ -295,6 +295,7 @@ extends WorkspaceScreen {
     public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
         super.extractRenderState(g, mx, my, delta);
         drawWorkspace(g, "ai_block_bridge.menu.structure_editor");
+        g.outline(7, 103, width - 14, editorHeight + 2, 0xFF888888);
         EditorErrorMarker.extract(g, this.font, this.editor, BridgeClient.script, this.errorLine, 8, 104, this.width - 16, this.editorHeight);
         g.text(this.font, this.font.plainSubstrByWidth(Messages.display(BridgeClient.status), this.width - 16), 8, this.height - 22, -8307, false);
         g.text(this.font, this.font.plainSubstrByWidth(Messages.display(Messages.text("ai_block_bridge.editor.hint", new Object[0])), this.width - 16), 8, this.height - 10, -5592406, false);

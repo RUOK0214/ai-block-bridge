@@ -47,7 +47,7 @@ public final class TestScreen extends WorkspaceScreen {
         options = button(Messages.text("ai_block_bridge.record_options.title"), columnX(3, 4), 72, toolWidth,
             () -> minecraft.gui.setScreen(new RecordingOptionsScreen(this)));
         editorHeight = Math.max(12, height - 158);
-        editor = MultiLineEditBox.builder().setX(8).setY(104).setShowDecorations(true)
+        editor = MultiLineEditBox.builder().setX(8).setY(104).setShowDecorations(false)
             .build(font, width - 16, editorHeight, Messages.component(Messages.text("ai_block_bridge.menu.test_editor")));
         editor.setCharacterLimit(TestScript.MAX_CHARS);
         editor.setValue(BridgeClient.testScript);
@@ -175,6 +175,7 @@ public final class TestScreen extends WorkspaceScreen {
     @Override public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
         super.extractRenderState(g, mx, my, delta);
         drawWorkspace(g, "ai_block_bridge.menu.test_editor");
+        g.outline(7, 103, width - 14, editorHeight + 2, 0xFF888888);
         EditorErrorMarker.extract(g, font, editor, BridgeClient.testScript, errorLine, 8, 104, width - 16, editorHeight);
         g.text(font, font.plainSubstrByWidth(Messages.display(BridgeClient.status), width - 16), 8, height - 22, 0xFFFFDF8D, false);
         g.text(font, font.plainSubstrByWidth(Messages.display(Messages.text("ai_block_bridge.test.hint")), width - 16),
