@@ -1,0 +1,55 @@
+name: Publish 0.2.1
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [.github/workflows/release-0.2.1.yml]
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: release-v0.2.1
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_COMMIT: 35923ddd64844ac00640909fb31371c695ecad46
+      BUILD_RUN: '36078494743'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify tested build
+        run: |
+          set -euo pipefail
+          gh api "repos/$GH_REPO/actions/runs/$BUILD_RUN" > /tmp/build-run.json
+          jq -e --arg commit "$RELEASE_COMMIT" '.head_sha == $commit and .conclusion == "success" and .head_branch == "main"' /tmp/build-run.json
+          gh run download "$BUILD_RUN" --name ai-block-bridge-26.2 --dir release-assets
+      - name: Verify install jars
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, zipfile, hashlib
+          folder = pathlib.Path('release-assets')
+          sums = []
+          for name, mod in [('ai-block-bridge-0.2.1.jar', 'ai_block_bridge'), ('ai-block-bridge-2-0.2.1.jar', 'ai_block_bridge_2')]:
+              matches = list(folder.rglob(name))
+              assert len(matches) == 1, (name, matches)
+              jar = matches[0]
+              with zipfile.ZipFile(jar) as z:
+                  meta = json.loads(z.read('fabric.mod.json'))
+                  assert meta['version'] == '0.2.1' and meta['id'] == mod
+                  for notice in ['LICENSE', 'NOTICE', 'licenses/CC0-1.0.txt']:
+                      assert z.read(notice) == pathlib.Path(notice).read_bytes()
+              target = folder / name
+              if jar != target: target.write_bytes(jar.read_bytes())
+              sums.append(hashlib.sha256(target.read_bytes()).hexdigest() + '  ' + name)
+          (folder / 'SHA256SUMS.txt').write_text('\n'.join(sums) + '\n')
+          PY
+      - name: Publish both mods
+        run: |
+          set -euo pipefail
+          gh release create v0.2.1 --target "$RELEASE_COMMIT" --draft --title 'AI Block Bridge 0.2.1 · Minecraft 26.2 / Fabric' --notes-file docs/releases/v0.2.1.md
+          gh release upload v0.2.1 release-assets/ai-block-bridge-0.2.1.jar release-assets/ai-block-bridge-2-0.2.1.jar release-assets/SHA256SUMS.txt docs/automation.md LICENSE NOTICE
+          gh release edit v0.2.1 --draft=false --latest
