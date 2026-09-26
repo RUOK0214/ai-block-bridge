@@ -7,6 +7,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.core.Direction;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 public class TestRunnerGameTests {
@@ -124,10 +125,17 @@ public class TestRunnerGameTests {
             // Deliberately stale state: only an unwanted neighbour notification can wake it.
             level.setBlock(sentinel, Blocks.REDSTONE_WALL_TORCH.defaultBlockState()
                 .setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST)
-                .setValue(BlockStateProperties.LIT, false), Block.UPDATE_CLIENTS);
+                .setValue(BlockStateProperties.LIT, false), Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+            // Installing an intentionally stale torch can itself enqueue a correction tick.
+            // Remove that fixture-setup work before observing notifications from TestRunner.
+            level.getBlockTicks().clearArea(new BoundingBox(sentinel.getX(), sentinel.getY(), sentinel.getZ(),
+                sentinel.getX(), sentinel.getY(), sentinel.getZ()));
+        });
+        h.runAtTickTime(15, () -> {
+            h.assertTrue(!level.getBlockState(sentinel).getValue(BlockStateProperties.LIT), "Sentinel changed before TestRunner ran");
             runner.tick(level);
         });
-        h.runAtTickTime(20, () -> {
+        h.runAtTickTime(25, () -> {
             h.assertTrue(runner.done() && runner.report().contains("passed 1 | failed 0"), runner.report());
             h.assertTrue(!level.getBlockState(sentinel).getValue(BlockStateProperties.LIT), "Unwanted notification woke an unrelated torch");
             h.succeed();
