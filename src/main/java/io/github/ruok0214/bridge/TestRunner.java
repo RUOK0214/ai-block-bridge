@@ -6,10 +6,14 @@ import java.util.List;
 import java.util.Map;
 import net.minecraft.commands.arguments.blocks.BlockStateParser;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.ButtonBlock;
+import net.minecraft.world.level.block.LeverBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.Property;
 
 /** Drives inputs and checks outputs across server ticks. States are parsed up front so a typo never touches the world. */
@@ -69,6 +73,29 @@ public final class TestRunner {
         }
         level.setBlock(pos, updated, Block.UPDATE_ALL);
         level.updateNeighborsAt(pos, updated.getBlock());
+        // Raw state changes do not run the switch's interaction callback. Notify the support
+        // as well, so torches and other readers of that block see both power-on and power-off.
+        // Do not fan out around all six neighbours: that would update unrelated BUD circuits.
+        BlockPos oldSupport = switchSupport(pos, actual);
+        if (oldSupport != null) {
+            BlockPos newSupport = switchSupport(pos, updated);
+            boolean powerChanged = !actual.getValue(BlockStateProperties.POWERED).equals(updated.getValue(BlockStateProperties.POWERED));
+            boolean supportChanged = !oldSupport.equals(newSupport);
+            if (powerChanged || supportChanged) {
+                level.updateNeighborsAt(oldSupport, actual.getBlock());
+                if (supportChanged) level.updateNeighborsAt(newSupport, updated.getBlock());
+            }
+        }
+    }
+
+    private static BlockPos switchSupport(BlockPos pos, BlockState state) {
+        if (!(state.getBlock() instanceof LeverBlock) && !(state.getBlock() instanceof ButtonBlock)) return null;
+        Direction direction = switch (state.getValue(BlockStateProperties.ATTACH_FACE)) {
+            case FLOOR -> Direction.DOWN;
+            case CEILING -> Direction.UP;
+            case WALL -> state.getValue(BlockStateProperties.HORIZONTAL_FACING).getOpposite();
+        };
+        return pos.relative(direction);
     }
 
     private void check(ServerLevel level, BlockPos pos, Action action) {
