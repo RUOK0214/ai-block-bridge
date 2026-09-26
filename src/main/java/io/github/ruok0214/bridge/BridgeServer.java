@@ -395,7 +395,7 @@ public final class BridgeServer {
     static PastePlan planPaste(ServerLevel level, Region r, String body) throws Exception {
         List<Cell> target = new ArrayList<>(prepare(level, r, body));
         int listed = target.size();
-        if (Script.unlisted(body) == Script.Unlisted.CLEAR) {
+        if (false) {
             var occupied = new java.util.HashSet<BlockPos>();
             for (Cell c : target) occupied.add(c.pos);
             for (BlockPos pos : BlockPos.betweenClosed(r.x(), r.y(), r.z(), r.maxX(), r.maxY(), r.maxZ())) {

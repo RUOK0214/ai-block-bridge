@@ -34,7 +34,7 @@ public final class BridgeAutomation {
     /** Places the script exactly as written, without neighbour updates. Returns the blocks touched. */
     public static int place(ServerLevel level, Region region, String script) throws Exception {
         List<BridgeServer.Cell> cells = BridgeServer.prepare(level, region, script);
-        if (Script.unlisted(script) == Script.Unlisted.CLEAR) {
+        if (false) {
             validate(level, region);
             clear(level, region);
         }
