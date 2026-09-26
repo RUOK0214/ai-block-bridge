@@ -28,8 +28,58 @@ public final class RoundTripClientTest implements FabricClientGameTest {
 
             settleReportsWhatTheWorldCorrected(context);
             undoStillWorksAfterSettling(context);
+            unlistedPolicyAndUndo(context, world.getServer()::runCommand);
             testScriptDrivesAndJudgesTheCircuit(context, world.getServer()::runCommand);
         }
+    }
+
+    private void unlistedPolicyAndUndo(ClientGameTestContext context, java.util.function.Consumer<String> command) {
+        command.accept("fill 0 4 3 3 4 3 minecraft:air");
+        command.accept("setblock 1 4 3 minecraft:barrel{Items:[{Slot:0b,id:\"minecraft:diamond\",count:3}]}");
+        command.accept("setblock 3 4 3 minecraft:emerald_block");
+        context.waitTicks(REQUEST_GAP);
+        context.runOnClient(mc -> {
+            BridgeClient.a = new BlockPos(0,4,3);
+            BridgeClient.b = new BlockPos(2,4,3);
+            BridgeClient.script = "0 0 0 | minecraft:gold_block";
+            BridgeClient.send(1);
+        });
+        context.waitTicks(REQUEST_GAP);
+        context.runOnClient(mc -> {
+            if (Messages.isError(BridgeClient.status) || !mc.level.getBlockState(new BlockPos(1,4,3)).is(net.minecraft.world.level.block.Blocks.BARREL))
+                throw new AssertionError("Absent unlisted header must preserve the omitted barrel");
+            BridgeClient.send(2);
+        });
+        context.waitTicks(REQUEST_GAP);
+        context.runOnClient(mc -> {
+            BridgeClient.script = "# unlisted: clear\n0 0 0 | minecraft:gold_block";
+            BridgeClient.send(1);
+        });
+        context.waitTicks(REQUEST_GAP);
+        context.setScreen(BridgeScreen::new);
+        context.takeScreenshot("unlisted-clear-mode");
+        context.runOnClient(mc -> {
+            if (Messages.isError(BridgeClient.status) || !mc.level.getBlockState(new BlockPos(1,4,3)).isAir())
+                throw new AssertionError("Clear paste did not remove the omitted barrel");
+            if (!mc.level.getBlockState(new BlockPos(3,4,3)).is(net.minecraft.world.level.block.Blocks.EMERALD_BLOCK))
+                throw new AssertionError("Clear affected a block outside the region");
+            BridgeClient.send(2);
+        });
+        context.waitTicks(REQUEST_GAP);
+        context.runOnClient(mc -> {
+            if (Messages.isError(BridgeClient.status) || !mc.level.getBlockState(new BlockPos(0,4,3)).isAir()
+                || !mc.level.getBlockState(new BlockPos(1,4,3)).is(net.minecraft.world.level.block.Blocks.BARREL))
+                throw new AssertionError("Real undo did not restore omitted blocks and original air");
+            BridgeClient.script = "# unlisted: invalid\n0 0 0 | minecraft:gold_block";
+            BridgeClient.send(1);
+        });
+        context.waitTicks(REQUEST_GAP);
+        context.runOnClient(mc -> {
+            if (!Messages.isError(BridgeClient.status) || !mc.level.getBlockState(new BlockPos(0,4,3)).isAir()
+                || !mc.level.getBlockState(new BlockPos(1,4,3)).is(net.minecraft.world.level.block.Blocks.BARREL))
+                throw new AssertionError("Invalid header was not rejected before world changes");
+        });
+        context.setScreen(() -> null);
     }
 
     private void settleReportsWhatTheWorldCorrected(ClientGameTestContext context) {

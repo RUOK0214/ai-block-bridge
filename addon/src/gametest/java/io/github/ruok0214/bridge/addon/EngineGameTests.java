@@ -9,6 +9,26 @@ import net.minecraft.world.level.block.Blocks;
 
 /** The whole add-on loop: clear, place, settle, test, report -- with no human in it. */
 public class EngineGameTests {
+    @GameTest(structure="ai_block_bridge_2_test:empty")
+    public void jsonAndScriptClearCombineWithOr(GameTestHelper h) throws Exception {
+        var level = h.getLevel();
+        Region r = region(h);
+        BlockPos omitted = new BlockPos(r.x()+1,r.y(),r.z());
+        for (boolean jsonClear : new boolean[]{false,true}) {
+            for (String header : new String[]{"", "# unlisted: keep\n", "# unlisted: clear\n"}) {
+                level.setBlock(omitted, Blocks.GOLD_BLOCK.defaultBlockState(), 818);
+                new Engine(level,r,header+"0 0 0 | minecraft:stone",null,jsonClear);
+                boolean expectedClear = jsonClear || header.contains(": clear");
+                h.assertTrue(level.getBlockState(omitted).isAir() == expectedClear, "Wrong clear precedence: " + jsonClear + "/" + header);
+            }
+        }
+        level.setBlock(omitted, Blocks.GOLD_BLOCK.defaultBlockState(), 818);
+        boolean rejected = false;
+        try { new Engine(level,r,"# unlisted: invalid\n0 0 0 | minecraft:stone",null,true); }
+        catch (IllegalArgumentException ex) { rejected = true; }
+        h.assertTrue(rejected && level.getBlockState(omitted).is(Blocks.GOLD_BLOCK), "Invalid header allowed destructive clearing");
+        h.succeed();
+    }
     /** Lever, three bare wires, a repeater, a wire written wrong, and a lamp. */
     private static final String CIRCUIT="0 0 0 | minecraft:stone\n1 0 0 | minecraft:stone\n2 0 0 | minecraft:stone\n"
         +"3 0 0 | minecraft:stone\n4 0 0 | minecraft:stone\n5 0 0 | minecraft:stone\n6 0 0 | minecraft:stone\n"

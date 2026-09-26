@@ -1,6 +1,6 @@
 # AI Block Bridge 2
 
-기본 모드 0.2.0 이상과 애드온을 함께 설치합니다. Minecraft 26.2, Java 25,
+0.2.2 애드온은 기본 모드 0.2.2 이상과 함께 설치합니다. Minecraft 26.2, Java 25,
 Fabric Loader 0.19.5 이상 및 해당 Minecraft용 Fabric API가 필요합니다.
 모드는 네트워크 연결을 열지 않습니다. AI 연동은 외부 프로그램의 파일 입출력으로 구현합니다.
 
@@ -15,6 +15,9 @@ Fabric Loader 0.19.5 이상 및 해당 Minecraft용 Fabric API가 필요합니�
     {"id":"attempt-1","dimension":"minecraft:overworld","region":[0,64,0,7,66,0],"clear":true,"tickRate":200,"script":"0 0 0 | minecraft:stone","test":"@case stone\nexpect 0 0 0 | minecraft:stone"}
 
 clear 기본값은 true입니다. 기존 회로를 테스트만 하려면 반드시 clear:false를 지정하세요.
+스크립트의 `# unlisted: clear`도 영역 비우기를 요청합니다. JSON clear 또는 스크립트 clear 중 하나라도 참이면 비웁니다.
+기존 블록을 유지하려면 JSON `clear:false`와 스크립트 `# unlisted: keep`(또는 지시자 없음)을 함께 사용하세요.
+잘못된 unlisted 값과 중복 선언은 비우기 전에 거부됩니다. 기본 모드의 붙여넣기 취소는 애드온 실행에 적용되지 않으며, 애드온은 복구 스냅샷 파일을 생성하지 않습니다.
 tickRate는 서버 전체 속도이며 종료·취소 시 복원합니다. sprint는 선택적인 가속 틱 수입니다.
 
 처리 중 파일은 processing에 있으며 응답 저장 후 done으로 이동합니다.

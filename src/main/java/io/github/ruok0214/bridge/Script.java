@@ -7,8 +7,31 @@ public final class Script {
     public static final int MAX_CHARS = 2_000_000;
     public static final int MAX_TIMELINE_CHARS = 20_000_000;
     public record Entry(int x, int y, int z, String state, String nbt, int line) {}
+    public enum Unlisted { KEEP, CLEAR }
+
+    /** The policy travels with the text; absence always preserves old scripts' behaviour. */
+    public static Unlisted unlisted(String text) {
+        if (text.length() > MAX_CHARS) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.script_limit"));
+        Unlisted result = Unlisted.KEEP;
+        boolean seen = false;
+        String[] lines = text.replace("\uFEFF", "").split("\\R", -1);
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i].strip();
+            if (!line.startsWith("#")) continue;
+            String header = line.substring(1).strip();
+            if (!header.matches("unlisted(?:\\s|:|$).*")) continue;
+            if (seen || !header.matches("unlisted\\s*:\\s*(keep|clear)"))
+                throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.line", i + 1,
+                    Messages.text("ai_block_bridge.error.unlisted")));
+            result = header.substring(header.indexOf(':') + 1).strip().equals("clear") ? Unlisted.CLEAR : Unlisted.KEEP;
+            seen = true;
+        }
+        return result;
+    }
+
     public static List<Entry> parse(String text, Region region) {
         if (text.length()>MAX_CHARS) throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.script_limit"));
+        unlisted(text);
         var entries = new ArrayList<Entry>();
         Set<String> occupied = new HashSet<>();
         String[] lines = text.replace("\uFEFF", "").split("\\R", -1);

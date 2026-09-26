@@ -3,6 +3,22 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ScriptTest {
+    @Test void unlistedDefaultsToKeepAndSurvivesCoding() {
+        String text = "0 0 0 | minecraft:stone";
+        assertEquals(Script.Unlisted.KEEP, Script.unlisted(text));
+        assertEquals(Script.Unlisted.KEEP, Script.unlisted("# unlisted: keep\n" + text));
+        String clear = "\uFEFF# unlisted: clear\r\n" + text;
+        assertEquals(Script.Unlisted.CLEAR, Script.unlisted(PaletteFormat.encode(clear)));
+        assertEquals(1, Script.parse(clear, r).size());
+    }
+    @Test void invalidOrDuplicateUnlistedIsRejectedWithLineNumber() {
+        for (String header : new String[]{"# unlisted: erase", "# unlisted:", "# unlisted clear",
+                "# unlisted: keep\n# unlisted: clear", "# unlisted: clear\n# unlisted: clear"}) {
+            var ex = assertThrows(IllegalArgumentException.class,
+                () -> Script.parse(header + "\n0 0 0 | minecraft:stone", r));
+            assertTrue(Messages.lineNumber(ex.getMessage()) > 0);
+        }
+    }
     private final Region r=Region.of(9,-3,8,7,-1,9);
     @Test void originUsesIndependentMinimums(){assertEquals(new Region(7,-3,8,9,-1,9),r);assertEquals(18,r.volume());}
     @Test void singleBlockIsInclusive(){assertEquals(1,Region.of(1,2,3,1,2,3).volume());}

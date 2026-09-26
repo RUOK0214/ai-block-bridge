@@ -54,6 +54,8 @@ extends WorkspaceScreen {
     private int editorHeight;
     private int errorLine;
     private String lastStatus = "";
+    private String policyText;
+    private String policyMode = "keep";
 
     public BridgeScreen() {
         super(Messages.component("AI Block Bridge"));
@@ -127,7 +129,9 @@ extends WorkspaceScreen {
             try {
                 Region r = BridgeClient.region();
                 int count = Script.parse(BridgeClient.script, r).size();
-                this.confirm(Messages.text("ai_block_bridge.confirm.paste_title", new Object[0]), Messages.text("ai_block_bridge.confirm.paste", r.description(), count), () -> BridgeClient.send(1));
+                String key = Script.unlisted(BridgeClient.script) == Script.Unlisted.CLEAR
+                    ? "ai_block_bridge.confirm.paste_clear" : "ai_block_bridge.confirm.paste";
+                this.confirm(Messages.text("ai_block_bridge.confirm.paste_title", new Object[0]), Messages.text(key, r.description(), count), () -> BridgeClient.send(1));
             }
             catch (Exception ex) {
                 BridgeClient.status = ex.getMessage();
@@ -294,7 +298,12 @@ extends WorkspaceScreen {
 
     public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
         super.extractRenderState(g, mx, my, delta);
-        drawWorkspace(g, "ai_block_bridge.menu.structure_editor");
+        if (!BridgeClient.script.equals(policyText)) {
+            policyText = BridgeClient.script;
+            try { policyMode = Script.unlisted(policyText) == Script.Unlisted.CLEAR ? "clear" : "keep"; }
+            catch (IllegalArgumentException ex) { policyMode = "invalid"; }
+        }
+        drawWorkspace(g, "ai_block_bridge.menu.structure_" + policyMode);
         g.outline(7, 103, width - 14, editorHeight + 2, 0xFF888888);
         EditorErrorMarker.extract(g, this.font, this.editor, BridgeClient.script, this.errorLine, 8, 104, this.width - 16, this.editorHeight);
         g.text(this.font, this.font.plainSubstrByWidth(Messages.display(BridgeClient.status), this.width - 16), 8, this.height - 22, -8307, false);

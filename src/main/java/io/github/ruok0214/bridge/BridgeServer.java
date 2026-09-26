@@ -389,11 +389,39 @@ public final class BridgeServer {
         return cells;
     }
 
+    record PastePlan(List<Cell> target, List<Cell> before, int listed) {}
+
+    /** Complete validation and recovery data before the first world write. */
+    static PastePlan planPaste(ServerLevel level, Region r, String body) throws Exception {
+        List<Cell> target = new ArrayList<>(prepare(level, r, body));
+        int listed = target.size();
+        if (Script.unlisted(body) == Script.Unlisted.CLEAR) {
+            var occupied = new java.util.HashSet<BlockPos>();
+            for (Cell c : target) occupied.add(c.pos);
+            for (BlockPos pos : BlockPos.betweenClosed(r.x(), r.y(), r.z(), r.maxX(), r.maxY(), r.maxZ())) {
+                if (!occupied.contains(pos) && !level.getBlockState(pos).isAir())
+                    target.add(new Cell(pos.immutable(), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), null));
+            }
+        }
+        // Includes original air at listed positions, so undo removes newly placed blocks too.
+        List<Cell> before = new ArrayList<>();
+        long snapshotChars = 0;
+        for (Cell c : target) {
+            Cell old = snapshot(level, c.pos);
+            snapshotChars += old.nbt == null ? 0 : old.nbt.toString().length();
+            if (snapshotChars > 2_000_000L)
+                throw new IllegalArgumentException(Messages.text("ai_block_bridge.error.undo_large"));
+            before.add(old);
+        }
+        checkSnapshotSize(target);
+        return new PastePlan(target, before, listed);
+    }
+
     private static void paste(ServerPlayer p, BridgePacket packet, ServerLevel level, Region r, String body) throws Exception {
         List<Cell> after;
-        List<Cell> target = BridgeServer.prepare(level, r, body);
-        List<Cell> before = target.stream().map(c -> BridgeServer.snapshot(level, c.pos)).toList();
-        BridgeServer.checkSnapshotSize(before);
+        PastePlan plan = planPaste(level, r, body);
+        List<Cell> target = plan.target;
+        List<Cell> before = plan.before;
         try {
             BridgeServer.apply(level, target);
             after = target.stream().map(c -> BridgeServer.snapshot(level, c.pos)).toList();

@@ -1,4 +1,9 @@
 {
+  "ai_block_bridge.error.unlisted": "unlisted는 keep 또는 clear여야 하며 한 번만 선언할 수 있습니다.",
+  "ai_block_bridge.confirm.paste_clear": "%s / 영역 전체 교체: 스크립트의 %s블록을 배치하고, 적지 않은 좌표의 모든 블록과 통 내용물을 삭제합니다. 계속할까요?",
+  "ai_block_bridge.menu.structure_keep": "구조 스크립트 · 생략 좌표 유지 (keep)",
+  "ai_block_bridge.menu.structure_clear": "구조 스크립트 · 생략 좌표 삭제 (clear)",
+  "ai_block_bridge.menu.structure_invalid": "구조 스크립트 · unlisted 오류 — 배치 불가",
   "key.category.ai_block_bridge.controls": "AI Block Bridge",
   "key.ai_block_bridge.open": "설정 / 스크립트 편집창 열기",
   "key.ai_block_bridge.first": "바라보는 블록을 모서리 1로 선택",
@@ -7,7 +12,7 @@
   "key.ai_block_bridge.record": "틱 변화 기록 시작 / 중지",
   "ai_block_bridge.corner_field": "모서리 %s %s",
   "ai_block_bridge.validated": "%s블록: 좌표·형식 검사 통과 (블록/NBT는 서버에서 최종 검증)",
-  "ai_block_bridge.help.body": "x y z | minecraft:block[상태] | {NBT}. 공기는 minecraft:air. 생략한 좌표는 유지됩니다. 영역은 최대 %s블록. 취소 기록은 접속 중에만 유지됩니다.",
+  "ai_block_bridge.help.body": "x y z | minecraft:block[상태] | {NBT}. 공기는 minecraft:air. 생략 좌표는 기본 유지하며, # unlisted: clear를 적으면 영역 안의 생략 좌표를 삭제합니다. 영역은 최대 %s블록. 취소 기록은 접속 중에만 유지됩니다.",
   "ai_block_bridge.confirm.paste": "%s / %s블록과 해당 통 내용물이 교체됩니다. 테스트 월드에서 먼저 확인하세요.",
   "ai_block_bridge.applied": "적용: %s",
   "ai_block_bridge.coordinates_failed": "좌표 적용 실패: %s",

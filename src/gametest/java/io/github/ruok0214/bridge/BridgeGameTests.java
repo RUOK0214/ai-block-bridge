@@ -9,6 +9,54 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 public class BridgeGameTests {
+    @GameTest
+    public void clearPlanRestoresOmittedContainerAndOriginalAir(GameTestHelper h) throws Exception {
+        var level = h.getLevel();
+        BlockPos p = h.absolutePos(new BlockPos(1,2,1));
+        Region r = Region.of(p.getX(), p.getY(), p.getZ(), p.getX()+2, p.getY(), p.getZ());
+        BridgeServer.apply(level, BridgeServer.prepare(level, r,
+            "0 0 0 | minecraft:air\n1 0 0 | minecraft:barrel | {Items:[{Slot:0b,id:\"minecraft:diamond\",count:3}]}\n2 0 0 | minecraft:air"));
+        var barrel = BridgeServer.snapshot(level, p.east());
+        var plan = BridgeServer.planPaste(level, r, "# unlisted: clear\n0 0 0 | minecraft:gold_block");
+        h.assertTrue(plan.before().size() == 2, "Snapshot must include the deleted barrel and original air, but skip untouched air");
+        BridgeServer.apply(level, plan.target());
+        h.assertTrue(level.getBlockState(p.east()).isAir(), "Omitted container survived clear");
+        h.assertTrue(level.getBlockState(p).is(Blocks.GOLD_BLOCK), "Listed block missing");
+        BridgeServer.apply(level, plan.before());
+        h.assertTrue(barrel.equals(BridgeServer.snapshot(level, p.east())), "Undo lost omitted container state or items");
+        h.assertTrue(level.getBlockState(p).isAir(), "Undo left a newly placed block");
+        h.succeed();
+    }
+
+    @GameTest
+    public void oversizedClearSnapshotIsRejectedBeforePlacement(GameTestHelper h) throws Exception {
+        var level = h.getLevel();
+        BlockPos p = h.absolutePos(new BlockPos(1,2,1));
+        Region r = Region.of(p.getX(), p.getY(), p.getZ(), p.getX()+2, p.getY(), p.getZ());
+        level.setBlock(p, Blocks.STONE.defaultBlockState(), 818);
+        for (int i = 1; i <= 2; i++) {
+            BlockPos pos = p.offset(i, 0, 0);
+            level.setBlock(pos, Blocks.BARREL.defaultBlockState(), 818);
+            var barrel = (net.minecraft.world.level.block.entity.BarrelBlockEntity)level.getBlockEntity(pos);
+            var item = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.PAPER);
+            var data = new net.minecraft.nbt.CompoundTag();
+            data.putString("payload", "x".repeat(1_050_000));
+            item.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(data));
+            barrel.setItem(0, item);
+        }
+        var original = List.of(BridgeServer.snapshot(level,p), BridgeServer.snapshot(level,p.east()), BridgeServer.snapshot(level,p.offset(2,0,0)));
+        boolean refused = false;
+        try {
+            var plan = BridgeServer.planPaste(level, r, "# unlisted: clear\n0 0 0 | minecraft:gold_block");
+            BridgeServer.apply(level, plan.target());
+        } catch (IllegalArgumentException ex) {
+            refused = ex.getMessage().contains("error.undo_large");
+        }
+        h.assertTrue(refused, "Oversized omitted-container recovery data was not rejected");
+        for (var cell : original) h.assertTrue(cell.equals(BridgeServer.snapshot(level,cell.pos())), "Rejected paste changed world data");
+        h.succeed();
+    }
+
     @GameTest(structure="ai_block_bridge_test:large_empty")
     public void recordingBundleKeepsInitialStructure(GameTestHelper h) {
         var level=h.getLevel();
