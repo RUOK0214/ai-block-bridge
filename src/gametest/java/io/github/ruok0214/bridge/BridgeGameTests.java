@@ -40,7 +40,8 @@ public class BridgeGameTests {
             var barrel = (net.minecraft.world.level.block.entity.BarrelBlockEntity)level.getBlockEntity(pos);
             var item = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.PAPER);
             var data = new net.minecraft.nbt.CompoundTag();
-            data.putString("payload", "x".repeat(1_050_000));
+            // Each string stays below NBT's on-disk UTF limit; the aggregate exceeds undo's budget.
+            for (int part = 0; part < 21; part++) data.putString("payload" + part, "x".repeat(50_000));
             item.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(data));
             barrel.setItem(0, item);
         }
